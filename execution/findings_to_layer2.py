@@ -151,7 +151,7 @@ def rules_trust_credibility(area: dict, biz: dict) -> str:
     found = area.get("found", "")
 
     # Review-specific rules (most impactful)
-    has_reviews = "[REVIEW_COUNT]" or "reviews" in found.lower()
+    has_reviews = "[REVIEW_COUNT]" in found or "reviews" in found.lower()
 
     if rating == "❌":
         lines += [

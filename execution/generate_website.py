@@ -52,7 +52,8 @@ MASTER_DIR     = DOCS_DIR / "master_prompts"
 UNIVERSAL_FILE = MASTER_DIR / "universal_rules.txt"
 OUTPUT_DIR     = PROJECT_ROOT / "output"
 PACKAGES_DIR   = OUTPUT_DIR / "prompt_packages"
-EXTRACT_SCRIPT = PROJECT_ROOT / "execution" / "extract_business_data.py"
+SIBLING_PROJECT = PROJECT_ROOT.parent / "website-audit-builder"
+EXTRACT_SCRIPT  = SIBLING_PROJECT / "execution" / "extract_business_data.py"
 
 MODES = {
     "bolt":         "Bolt.new — paste into chatbox (React + Tailwind)",

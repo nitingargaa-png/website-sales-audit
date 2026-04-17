@@ -404,12 +404,39 @@ the last content in the audit file.
 | `business_name` | string \| null | Business name as identified in the audit. `null` if unknown. |
 | `business_url` | string \| null | Input URL, normalized: lowercase host, no trailing slash. `null` if unknown. |
 | `trade` | enum \| null | One of: `plumbing`, `hvac`, `cleaning`, `landscaping`, `electrical`, `pest_control`, `painting`, `garage_door`, `roofing`, `glass`, `other`. |
-| `ghl_upgrade_candidate` | bool \| null | `true` if the prospect already has a CRM/site that GHL could replace or upgrade. |
+| `ghl_upgrade_candidate` | bool \| null | `true` ONLY if the prospect is currently running a CRM, booking, or communications platform that GHL would replace in a lateral migration. See expanded definition below. |
 | `mctb_applicable` | bool \| null | `true` if missed-call-text-back would meaningfully lift their phone/lead flow. |
 | `vaai_applicable` | bool \| null | `true` if a voice AI agent fits their call volume and after-hours pattern. |
 | `disqualifiers` | list of strings | Known disqualifiers detected. Empty list `[]` if none. |
 
 Unknown fields are represented as `null` (not empty string, not omitted).
+
+### `ghl_upgrade_candidate` — expanded definition
+
+The word "upgrade" here means **lateral migration**, not "first-time sale." A
+first-time GHL sale to a greenfield prospect follows a different triage path
+downstream — do not conflate the two.
+
+Set **`true`** only if the prospect is currently running one of these
+platforms (or another comparable one) that GHL would directly replace:
+
+- HubSpot
+- Keap / Infusionsoft
+- Salesforce Essentials
+- ActiveCampaign
+- ServiceTitan
+- Housecall Pro
+- Jobber (with communications tier)
+- Podium
+- Thryv
+
+Set **`false`** for:
+
+- Greenfield prospects — no CRM at all, or only Google Workspace + a basic
+  website + a phone
+- Prospects with major problems we can solve but no existing platform to
+  migrate FROM (first-time buyer, not an upgrade)
+- Solo operators running the business from a phone and a WordPress site
 
 ### Allowed `disqualifiers` values
 

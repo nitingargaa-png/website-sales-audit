@@ -379,3 +379,64 @@ Demo (prospect):
 
 Production (after client signs):
   git push to GitHub → connect Vercel → auto-deploys
+
+---
+
+## TRIAGE_META Schema (v1.0)
+
+TRIAGE_META is the machine-readable sidecar footer that every website-sales-audit
+report ends with. It is the **contract** between the emitter
+(website-sales-audit, via docs/SKILL.md) and the consumers
+(website-audit-builder's parse_audit.py and ghl-triage's audit_parser.py). Any
+change to this schema requires bumping `schema_version` and updating parsers in
+both downstream repos.
+
+The block is a fenced code block with the language identifier `triage-meta`,
+containing YAML. It is appended AFTER the four narrative sections and must be
+the last content in the audit file.
+
+### Fields
+
+| Field | Type | Allowed values / meaning |
+|---|---|---|
+| `schema_version` | string | Current version: `"1.0"`. Bump on any breaking change. |
+| `audit_generated_at` | string | ISO 8601 UTC timestamp of when the audit was written. |
+| `business_name` | string \| null | Business name as identified in the audit. `null` if unknown. |
+| `business_url` | string \| null | Input URL, normalized: lowercase host, no trailing slash. `null` if unknown. |
+| `trade` | enum \| null | One of: `plumbing`, `hvac`, `cleaning`, `landscaping`, `electrical`, `pest_control`, `painting`, `garage_door`, `roofing`, `glass`, `other`. |
+| `ghl_upgrade_candidate` | bool \| null | `true` if the prospect already has a CRM/site that GHL could replace or upgrade. |
+| `mctb_applicable` | bool \| null | `true` if missed-call-text-back would meaningfully lift their phone/lead flow. |
+| `vaai_applicable` | bool \| null | `true` if a voice AI agent fits their call volume and after-hours pattern. |
+| `disqualifiers` | list of strings | Known disqualifiers detected. Empty list `[]` if none. |
+
+Unknown fields are represented as `null` (not empty string, not omitted).
+
+### Allowed `disqualifiers` values
+
+- `national_chain` — franchise/enterprise, not SMB
+- `under_construction` — site is a placeholder
+- `out_of_service_area` — not US/Canada
+- `wrong_trade` — not one of the home service trades listed above
+- `dead_site` — domain resolves but site 404s or is parked
+
+### Example
+
+```triage-meta
+schema_version: "1.0"
+audit_generated_at: "2026-04-16T21:30:00Z"
+business_name: "Mississauga Plumbing Services"
+business_url: "https://mississaugaplumbingservices.com"
+trade: plumbing
+ghl_upgrade_candidate: false
+mctb_applicable: true
+vaai_applicable: true
+disqualifiers: []
+```
+
+### Schema evolution
+
+- Additive non-breaking changes (e.g. new optional field with a safe default):
+  keep `schema_version: "1.0"`.
+- Breaking changes (removed field, changed type, new required field without a
+  safe default): bump to `"1.1"` or `"2.0"` and update both consumer parsers
+  before rolling out the new emitter.

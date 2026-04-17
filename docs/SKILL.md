@@ -2293,3 +2293,68 @@ Do NOT include a "Quality Check" section in the output.
 - **Do not recommend specific platforms or builders** (no WordPress, Wix, Squarespace, etc.).
 - **Do not state unknowns as facts.** You cannot know their visitor count, ad spend,
   or exact Google ranking. Discuss risks and opportunities — not invented facts.
+
+---
+
+## TRIAGE_META BLOCK (required)
+
+Every audit report you save MUST end with a machine-readable TRIAGE_META block.
+This is a sidecar footer consumed by downstream pipelines
+(website-audit-builder's parse_audit.py and ghl-triage's audit_parser.py). It
+routes the prospect to the correct service pipeline (GHL-Upgrade vs MCTB vs
+VAAI) and applies disqualifier checks.
+
+**This block is NOT optional.** If it is missing, the audit is incomplete and
+downstream automation will reject the file.
+
+### Rules
+
+- Append the block AFTER the four narrative sections (Short report, Medium
+  report, Content Gap Summary, Talking Points). It must be the **last content
+  in the file** — nothing after it.
+- Do NOT include the TRIAGE_META block inside any of the four narrative
+  sections. It is a sidecar footer, not visible audit content.
+- Use a fenced code block with the language identifier `triage-meta`.
+- The payload inside the fence is YAML with the keys listed below.
+- If a field is genuinely unknown, use `null` — never an empty string.
+
+### Required fields
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version` | string | Always `"1.0"` for this version of the contract. |
+| `audit_generated_at` | string | ISO 8601 UTC timestamp of when the audit was written. |
+| `business_name` | string | Business name as identified in the audit. |
+| `business_url` | string | Input URL, normalized: lowercase host, no trailing slash. |
+| `trade` | enum | One of: `plumbing`, `hvac`, `cleaning`, `landscaping`, `electrical`, `pest_control`, `painting`, `garage_door`, `roofing`, `glass`, `other`. |
+| `ghl_upgrade_candidate` | bool | `true` if the prospect already has a CRM/site that GHL could replace or upgrade, based on audit findings. |
+| `mctb_applicable` | bool | `true` if missed-call-text-back would be a meaningful lift given their phone/lead flow. |
+| `vaai_applicable` | bool | `true` if a voice AI agent would fit their call volume and after-hours pattern. |
+| `disqualifiers` | list of strings | Known disqualifiers detected. Empty list `[]` if none. |
+
+### Allowed disqualifier values
+
+Emit any of these strings in the `disqualifiers` list when detected:
+
+- `national_chain` — franchise/enterprise, not SMB
+- `under_construction` — site is a placeholder
+- `out_of_service_area` — not US/Canada
+- `wrong_trade` — not one of the home service trades listed above
+- `dead_site` — domain resolves but site 404s or is parked
+
+### Example
+
+The block below is a concrete pattern to follow. Append a block exactly like
+this to every audit report you save:
+
+```triage-meta
+schema_version: "1.0"
+audit_generated_at: "2026-04-16T21:30:00Z"
+business_name: "Mississauga Plumbing Services"
+business_url: "https://mississaugaplumbingservices.com"
+trade: plumbing
+ghl_upgrade_candidate: false
+mctb_applicable: true
+vaai_applicable: true
+disqualifiers: []
+```

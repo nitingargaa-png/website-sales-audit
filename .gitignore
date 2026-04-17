@@ -1,0 +1,25 @@
+# Secrets — never commit
+.env
+.env.local
+*.key
+*.pem
+
+# Business data — contains PII (prospect phones, addresses, names, reviews)
+output/prompt_packages/
+output/structured_input.json
+output/*.json
+output/*.md
+input/*.csv
+input/*.xlsx
+input/*.xls
+
+# Build artifacts
+node_modules/
+dist/
+__pycache__/
+*.pyc
+
+# OS / IDE
+.DS_Store
+.vscode/
+.cache/

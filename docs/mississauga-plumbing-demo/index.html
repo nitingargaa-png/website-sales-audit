@@ -1,0 +1,853 @@
+<!-- SCREENSHOT LOOP: manual check at 390px -->
+<!DOCTYPE html>
+<html lang="en-CA">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Mississauga Plumbing Services | 24/7 Emergency Plumber | (647) 550-4003</title>
+  <meta name="description" content="Licensed plumbers in Mississauga, ON. 15+ years experience, 24/7 emergency, free estimates. Call (647) 550-4003.">
+
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "Plumber",
+    "name": "Mississauga Plumbing Services",
+    "telephone": "+16475504003",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Mississauga",
+      "addressRegion": "ON",
+      "addressCountry": "CA"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "reviewCount": "166"
+    },
+    "areaServed": ["Mississauga", "Brampton", "Oakville", "Etobicoke"],
+    "openingHours": "Mo-Su 00:00-23:59",
+    "url": "https://example.com"
+  }
+  </script>
+
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg'><text y='32' font-size='32'>🔧</text></svg>">
+
+  <style>
+    /* === RESET & BASE === */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      color: #1a1a1a;
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+      margin: 0;
+      padding: 0;
+      min-height: 0;
+    }
+    footer { margin-bottom: 0; padding-bottom: 0; }
+    img { max-width: 100%; display: block; }
+    a { text-decoration: none; }
+    section { opacity: 1; transform: none; }
+
+    /* === ANIMATION (progressive) === */
+    .anim-ready {
+      opacity: 0;
+      transform: translateY(20px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .anim-ready.anim-visible { opacity: 1; transform: translateY(0); }
+
+    /* === CONTAINER === */
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+    /* === HEADER === */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      background: #1a3a6b;
+      padding: 12px 0;
+      transition: box-shadow 0.3s ease;
+    }
+    header.scrolled { box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .header-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 20px;
+    }
+    .logo {
+      color: white;
+      font-size: 1.1rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .logo span { font-size: 24px; vertical-align: middle; margin-right: 6px; }
+    .nav-links {
+      display: flex;
+      gap: 24px;
+      align-items: center;
+      list-style: none;
+    }
+    .nav-links a {
+      color: rgba(255,255,255,0.85);
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: color 0.2s;
+    }
+    .nav-links a:hover { color: white; }
+    .header-phone {
+      display: inline-block;
+      background: #e84040;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      transition: background 0.2s;
+      white-space: nowrap;
+    }
+    .header-phone:hover { background: #d63636; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .header-badge {
+      color: rgba(255,255,255,0.75);
+      font-size: 0.8rem;
+      max-width: 200px;
+      line-height: 1.3;
+    }
+
+    @media (max-width: 768px) {
+      .nav-links, .header-badge { display: none !important; }
+      .logo { font-size: 0.95rem; }
+      .header-phone { padding: 8px 14px; font-size: 0.85rem; }
+    }
+
+    /* === DEMO BANNER === */
+    .demo-banner {
+      background: #1a3a6b;
+      color: white;
+      text-align: center;
+      padding: 8px 16px;
+      font-size: 13px;
+      font-family: system-ui, sans-serif;
+      position: relative;
+      z-index: 9999;
+    }
+
+    /* === HERO === */
+    .hero {
+      position: relative;
+      background-color: #1a3a6b;
+      background-image:
+        linear-gradient(rgba(26,58,107,0.92), rgba(26,58,107,0.92)),
+        repeating-linear-gradient(45deg, rgba(255,255,255,0.03) 0px,
+          rgba(255,255,255,0.03) 1px, transparent 1px, transparent 12px),
+        repeating-linear-gradient(-45deg, rgba(255,255,255,0.02) 0px,
+          rgba(255,255,255,0.02) 1px, transparent 1px, transparent 12px);
+      padding: 80px 20px;
+      text-align: center;
+      overflow: hidden;
+    }
+    .hero-watermark {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      font-size: 120px;
+      opacity: 0.06;
+      color: white;
+      pointer-events: none;
+      line-height: 1;
+    }
+    .hero h1 {
+      font-weight: 900;
+      color: white;
+      font-size: clamp(2rem, 5vw, 4.5rem);
+      max-width: 900px;
+      margin: 0 auto 16px;
+      line-height: 1.15;
+    }
+    .hero-sub {
+      color: rgba(255,255,255,0.85);
+      font-size: 1.1rem;
+      margin-bottom: 32px;
+    }
+    .hero-ctas {
+      display: flex;
+      gap: 16px;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 24px;
+    }
+    .btn-primary {
+      display: inline-block;
+      background: #e84040;
+      color: white;
+      padding: 14px 28px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 1.05rem;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #d63636; }
+    .btn-secondary {
+      display: inline-block;
+      border: 2px solid white;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-secondary:hover { background: white; color: #1a3a6b; }
+    .hero-badges {
+      color: rgba(255,255,255,0.75);
+      font-size: 0.9rem;
+    }
+    @media (max-width: 768px) {
+      .hero { padding: 50px 16px; }
+      .btn-secondary {
+        border: none;
+        padding: 8px 16px;
+        font-size: 0.9rem;
+        text-decoration: underline;
+      }
+      .btn-secondary:hover { background: transparent; color: rgba(255,255,255,0.9); }
+    }
+
+    /* === TRUST BAR === */
+    .trust-bar {
+      background: white;
+      border-top: 1px solid #e5e7eb;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 24px 20px;
+    }
+    .trust-grid {
+      display: flex;
+      justify-content: center;
+      gap: 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .trust-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+      text-align: left;
+    }
+    .trust-icon { font-size: 1.5rem; color: #e84040; flex-shrink: 0; }
+    .trust-title { font-weight: 700; color: #1a1a1a; font-size: 0.95rem; }
+    .trust-subtitle { font-size: 0.875rem; color: #666; }
+    @media (max-width: 768px) {
+      .trust-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+      }
+    }
+
+    /* === SECTIONS === */
+    .section { padding: 64px 20px; }
+    .section-alt { background: #f7f9fc; }
+    .section-title {
+      text-align: center;
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: #1a3a6b;
+      margin-bottom: 8px;
+    }
+    .section-subtitle {
+      text-align: center;
+      color: #666;
+      font-size: 1.05rem;
+      margin-bottom: 40px;
+    }
+
+    /* === SERVICES GRID === */
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto 32px;
+    }
+    .service-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 28px 20px;
+      text-align: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .service-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+    }
+    .service-icon { font-size: 2.2rem; margin-bottom: 12px; }
+    .service-card h3 { font-size: 1rem; font-weight: 700; color: #1a3a6b; margin-bottom: 6px; }
+    .service-card p { font-size: 0.875rem; color: #666; }
+    .service-icon svg { display: block; margin: 0 auto; }
+    @media (max-width: 1024px) {
+      .services-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .services-grid { grid-template-columns: 1fr; }
+    }
+
+    .mid-cta {
+      text-align: center;
+      margin-top: 8px;
+    }
+    .mid-cta a {
+      display: inline-block;
+      background: #e84040;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: 700;
+      font-size: 1rem;
+      transition: background 0.2s;
+    }
+    .mid-cta a:hover { background: #d63636; }
+
+    /* === WHY CHOOSE US === */
+    .why-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    .why-card {
+      text-align: center;
+      padding: 24px;
+    }
+    .why-card span { font-size: 2.2rem; display: block; margin-bottom: 12px; }
+    .why-card h3 { font-size: 1.1rem; font-weight: 700; color: #1a3a6b; margin-bottom: 8px; }
+    .why-card p { font-size: 0.9rem; color: #555; }
+    @media (max-width: 768px) {
+      .why-grid { grid-template-columns: 1fr; }
+    }
+
+    /* === HOW IT WORKS === */
+    .steps-grid {
+      display: flex;
+      gap: 24px;
+      max-width: 1000px;
+      margin: 0 auto;
+      justify-content: center;
+    }
+    .step {
+      flex: 1;
+      text-align: center;
+      padding: 20px;
+    }
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: #e84040;
+      color: white;
+      font-weight: 700;
+      font-size: 1.2rem;
+      margin-bottom: 14px;
+    }
+    .step h3 { font-size: 1rem; font-weight: 700; color: #1a3a6b; margin-bottom: 6px; }
+    .step p { font-size: 0.875rem; color: #666; }
+    @media (max-width: 768px) {
+      .steps-grid { flex-direction: column; }
+    }
+
+    /* === REVIEWS === */
+    .reviews-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 24px;
+      max-width: 1100px;
+      margin: 0 auto 24px;
+    }
+    .review-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 10px;
+      padding: 28px;
+    }
+    .review-stars { color: #f5a623; font-size: 1.1rem; margin-bottom: 12px; }
+    .review-card em { color: #333; font-size: 0.925rem; line-height: 1.6; }
+    .review-author { margin-top: 14px; font-size: 0.875rem; color: #555; font-weight: 600; }
+    .review-author small { font-weight: 400; color: #888; }
+    .rating-display {
+      text-align: center;
+      font-size: 1.1rem;
+      color: #555;
+      margin-bottom: 32px;
+    }
+    .reviews-link { text-align: center; margin-top: 16px; }
+    .reviews-link a { color: #1a3a6b; font-weight: 600; font-size: 0.95rem; }
+    .reviews-link a:hover { text-decoration: underline; }
+    @media (max-width: 768px) {
+      .reviews-grid { grid-template-columns: 1fr; }
+    }
+
+    /* === SERVICE AREAS === */
+    .area-pills {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin: 24px 0;
+    }
+    .area-pill {
+      display: inline-block;
+      border: 1px solid #1a3a6b;
+      color: #1a3a6b;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.875rem;
+    }
+    .area-cta {
+      text-align: center;
+      margin-top: 20px;
+    }
+    .area-cta a {
+      display: inline-block;
+      background: #e84040;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-weight: 700;
+      transition: background 0.2s;
+    }
+    .area-cta a:hover { background: #d63636; }
+    .area-cta p { margin-top: 8px; color: #666; font-size: 0.9rem; }
+
+    /* === GHL PLACEHOLDERS === */
+    .ghl-placeholder {
+      background: #f8f9fa;
+      border: 2px dashed #d1d5db;
+      padding: 40px;
+      text-align: center;
+      min-height: 120px;
+      margin: 24px auto;
+      border-radius: 8px;
+      color: #6b7280;
+      font-size: 0.9rem;
+    }
+    .ghl-placeholder strong {
+      display: block;
+      margin-bottom: 8px;
+      color: #374151;
+    }
+
+    /* === FOOTER === */
+    footer {
+      background: #1a3a6b;
+      color: white;
+      padding: 48px 20px 0;
+    }
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .footer-col h3 { font-size: 1rem; font-weight: 700; margin-bottom: 12px; }
+    .footer-col p, .footer-col a { font-size: 0.9rem; color: rgba(255,255,255,0.85); line-height: 1.8; }
+    .footer-col a { text-decoration: underline; }
+    .footer-col a:hover { color: white; }
+    .footer-brand { font-weight: 700; font-size: 1.1rem; margin-bottom: 8px; }
+    .footer-emergency { color: #e84040; font-weight: 700; }
+    .pay-invoice {
+      display: inline-block;
+      margin-top: 8px;
+      border: 1px solid white;
+      padding: 6px 16px;
+      border-radius: 4px;
+      color: white;
+      text-decoration: none !important;
+      font-size: 0.875rem;
+      transition: background 0.2s;
+    }
+    .pay-invoice:hover { background: rgba(255,255,255,0.15); }
+    .footer-bottom {
+      border-top: 1px solid rgba(255,255,255,0.2);
+      margin-top: 32px;
+      padding: 16px 0;
+      text-align: center;
+      font-size: 0.825rem;
+      color: rgba(255,255,255,0.7);
+    }
+    @media (max-width: 768px) {
+      .footer-grid { grid-template-columns: 1fr; gap: 24px; }
+    }
+
+    /* === GHL CHAT WIDGET FIX === */
+    html, body { height: auto; min-height: 0; }
+    #ghl-chat-widget { display: block; height: 0 !important; min-height: 0 !important; overflow: hidden; margin: 0; padding: 0; font-size: 0; line-height: 0; }
+
+    /* === FOCUS === */
+    a:focus, button:focus {
+      outline: 2px solid #e84040;
+      outline-offset: 2px;
+    }
+  </style>
+</head>
+<body>
+
+<noscript>For the best experience, please enable JavaScript.</noscript>
+
+<!-- DEMO BANNER -->
+<div class="demo-banner">
+  Demo Preview — Not Live · Built by Animo Automation for Mississauga Plumbing Services
+</div>
+
+<!-- 1. STICKY HEADER -->
+<header>
+  <div class="header-inner">
+    <div class="logo"><span>🔧</span> Mississauga Plumbing Services</div>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="#services">Services</a></li>
+        <li><a href="#why-us">About</a></li>
+        <li><a href="#areas">Areas</a></li>
+        <li><a href="#contact">Book Now</a></li>
+      </ul>
+    </nav>
+    <div class="header-right">
+      <div class="header-badge">⚡ Missed us? We'll text you back in 60 seconds.</div>
+      <a href="tel:+16475504003" class="header-phone" aria-label="Call Mississauga Plumbing Services at (647) 550-4003">(647) 550-4003</a>
+    </div>
+  </div>
+</header>
+
+<!-- 2. HERO -->
+<section class="hero">
+  <div class="hero-watermark">🔧</div>
+  <div class="container">
+    <h1>Plumbing Emergency in Mississauga, ON? We Arrive in 60 Minutes.</h1>
+    <p class="hero-sub">⭐⭐⭐⭐⭐ 4.9/5 · 166 Google Reviews • Serving Mississauga, ON and surrounding areas</p>
+    <div class="hero-ctas">
+      <a href="tel:+16475504003" class="btn-primary" aria-label="Call Mississauga Plumbing Services at (647) 550-4003">📞 Call Now — 24/7 Emergency Service</a>
+      <a href="#contact" class="btn-secondary">Get a Free Quote</a>
+    </div>
+    <p class="hero-badges">🔒 Licensed &amp; Insured &nbsp;•&nbsp; ⭐⭐⭐⭐⭐ 4.9/5 · 166 Google Reviews &nbsp;•&nbsp; ⚡ 24/7 Emergency Available</p>
+  </div>
+</section>
+
+<!-- 3. TRUST BAR -->
+<section class="trust-bar">
+  <div class="trust-grid">
+    <div class="trust-item">
+      <span class="trust-icon">⚡</span>
+      <div>
+        <div class="trust-title">Available 24/7</div>
+        <div class="trust-subtitle">Emergency service including holidays</div>
+      </div>
+    </div>
+    <div class="trust-item">
+      <span class="trust-icon">✅</span>
+      <div>
+        <div class="trust-title">Licensed &amp; Insured</div>
+        <div class="trust-subtitle">Fully certified and covered</div>
+      </div>
+    </div>
+    <div class="trust-item">
+      <span class="trust-icon">⏱️</span>
+      <div>
+        <div class="trust-title">Arrive in 60 Minutes</div>
+        <div class="trust-subtitle">Fast dispatch every time</div>
+      </div>
+    </div>
+    <div class="trust-item">
+      <span class="trust-icon">📋</span>
+      <div>
+        <div class="trust-title">Free Estimates</div>
+        <div class="trust-subtitle">No obligation quotes</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. GHL VOICE WIDGET PLACEHOLDER -->
+<div id="ghl-voice-inline" style="background:#f8f9fa; border:2px dashed #d1d5db; padding:24px; text-align:center; border-radius:8px; margin:24px auto; max-width:640px; font-size:0.9rem; color:#6b7280;">
+  <strong style="display:block; margin-bottom:6px; color:#374151;">🎙️ Voice AI — Always-On Lead Capture</strong>
+  Live voice widget activates after GHL setup
+</div>
+<!-- GHL: paste inline voice AI widget JS snippet here -->
+
+<!-- 5. SERVICES -->
+<section class="section" id="services">
+  <div class="container">
+    <h2 class="section-title">Our Services</h2>
+    <p class="section-subtitle">Professional plumbing solutions for every need</p>
+    <div class="services-grid">
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#e84040"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">!</text></svg></div>
+        <h3>Emergency Plumbing</h3>
+        <p>24/7 rapid response for urgent plumbing problems</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#e84040"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">&#x2699;</text></svg></div>
+        <h3>Drain Cleaning</h3>
+        <p>Professional clearing of clogged and slow drains</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1a3a6b"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">&#x2B24;</text></svg></div>
+        <h3>Leak Detection &amp; Repair</h3>
+        <p>Pinpoint and fix leaks before they cause damage</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1a3a6b"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">&#x2600;</text></svg></div>
+        <h3>Water Heater Repair &amp; Replacement</h3>
+        <p>Restore hot water fast with expert service</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1a3a6b"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">&#x2716;</text></svg></div>
+        <h3>Pipe Repair &amp; Replacement</h3>
+        <p>Fix or replace damaged, leaking, or old pipes</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1a3a6b"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">&#x25B2;</text></svg></div>
+        <h3>Toilet Repair &amp; Installation</h3>
+        <p>From running toilets to full replacements</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1a3a6b"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">&#x2B58;</text></svg></div>
+        <h3>Faucet &amp; Fixture Repair</h3>
+        <p>Stop drips and upgrade your fixtures</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1a3a6b"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">&#x2193;</text></svg></div>
+        <h3>Sump Pump Services</h3>
+        <p>Installation, repair, and maintenance to prevent flooding</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1a3a6b"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">&#x2261;</text></svg></div>
+        <h3>Sewer Line Repair</h3>
+        <p>Diagnose and fix sewer line issues quickly</p>
+      </div>
+      <div class="service-card">
+        <div class="service-icon"><svg width="40" height="40"><circle cx="20" cy="20" r="20" fill="#1a3a6b"/><text x="20" y="26" text-anchor="middle" fill="white" font-size="18">&#x25A0;</text></svg></div>
+        <h3>Shower Installation</h3>
+        <p>Custom shower installs done right the first time</p>
+      </div>
+    </div>
+    <div class="mid-cta">
+      <a href="tel:+16475504003" aria-label="Call Mississauga Plumbing Services at (647) 550-4003">📞 Call (647) 550-4003 for Service</a>
+    </div>
+  </div>
+</section>
+
+<!-- 6. WHY CHOOSE US -->
+<section class="section section-alt" id="why-us">
+  <div class="container">
+    <h2 class="section-title">Why Choose Mississauga Plumbing Services</h2>
+    <div class="why-grid">
+      <div class="why-card">
+        <span>⚡</span>
+        <h3>Fast Emergency Response</h3>
+        <p>We dispatch within 30 minutes. Plumbing emergencies can't wait.</p>
+      </div>
+      <div class="why-card">
+        <span>💯</span>
+        <h3>Upfront Pricing</h3>
+        <p>No surprises. We give you the price before we start — guaranteed.</p>
+      </div>
+      <div class="why-card">
+        <span>🏆</span>
+        <h3>15+ Years of Local Experience</h3>
+        <p>Trusted by homeowners in Mississauga, ON for over 15+ years.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 7. HOW IT WORKS -->
+<section class="section">
+  <div class="container">
+    <h2 class="section-title">How It Works</h2>
+    <p class="section-subtitle">Getting your plumbing fixed is easy</p>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h3>Call or Text Us</h3>
+        <p>Available 24/7 including holidays</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h3>Fast Arrival</h3>
+        <p>Our team arrives in 60 minutes or less</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h3>Diagnose &amp; Fix</h3>
+        <p>Upfront pricing before any work begins</p>
+      </div>
+      <div class="step">
+        <div class="step-number">4</div>
+        <h3>Satisfaction Guaranteed</h3>
+        <p>We're not done until you're 100% happy</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 8. REVIEWS -->
+<section class="section section-alt">
+  <div class="container">
+    <h2 class="section-title">What Our Customers Say</h2>
+    <p class="rating-display">⭐⭐⭐⭐⭐ 4.9/5 · 166 Google Reviews</p>
+    <div class="reviews-grid">
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p><em>"Exceptional service. It's rare to find a plumber who actually cares, is excellent at their work, pays attention to detail, is polite and courteous in your home, arrives on time, and gets the job done right."</em></p>
+        <p class="review-author">— Google Reviewer · <small>Verified Google Review</small></p>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p><em>"Amazing work! My basement bathtub clogged for days and a bigger name plumbing company came 3 times with no luck. I called Mississauga Plumbing Service, Walli came over within 30 minutes and fixed the issue in 30 seconds. He then spent time to test and make sure everything was working just fine."</em></p>
+        <p class="review-author">— Google Reviewer · <small>Verified Google Review</small></p>
+      </div>
+      <div class="review-card">
+        <div class="review-stars">★★★★★</div>
+        <p><em>"Reliable service, professional work, and always a job well done. I trust Mississauga Plumbing Services for all my plumbing needs!"</em></p>
+        <p class="review-author">— Google Reviewer · <small>Verified Google Review</small></p>
+      </div>
+    </div>
+    <div class="reviews-link">
+      <a href="#" rel="noopener">Read all 166 reviews on Google →</a>
+    </div>
+  </div>
+</section>
+
+<!-- 9. GHL REVIEWS PLACEHOLDER -->
+<div id="ghl-reviews" class="ghl-placeholder" style="max-width:1200px; margin:24px auto;">
+  <strong>⭐ Live Google Reviews Feed</strong>
+  Auto-updating reviews activate after GHL setup
+</div>
+<!-- GHL: paste reviews widget JS snippet here -->
+
+<!-- 10. SERVICE AREAS -->
+<section class="section" id="areas">
+  <div class="container">
+    <h2 class="section-title">Proudly Serving Mississauga, ON and Surrounding Communities</h2>
+    <p class="section-subtitle">Fast, reliable plumbing service across the region</p>
+    <iframe
+      src="https://maps.google.com/maps?q=Mississauga,ON+Canada&output=embed&z=12"
+      width="100%" height="400" style="border:0; border-radius:8px;"
+      allowfullscreen loading="lazy"
+      title="Service area map for Mississauga Plumbing Services in Mississauga, ON">
+    </iframe>
+    <div class="area-pills">
+      <span class="area-pill">Mississauga</span>
+      <span class="area-pill">Brampton</span>
+      <span class="area-pill">Oakville</span>
+      <span class="area-pill">Etobicoke</span>
+      <span class="area-pill">Streetsville</span>
+      <span class="area-pill">Port Credit</span>
+    </div>
+    <div class="area-cta">
+      <a href="tel:+16475504003" aria-label="Call Mississauga Plumbing Services at (647) 550-4003">📞 Call (647) 550-4003</a>
+      <p>Not sure if we cover your area? Give us a call.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 11. CONTACT / QUOTE FORM -->
+<section class="section section-alt" id="contact">
+  <div class="container">
+    <h2 class="section-title">Get Your Free Quote</h2>
+    <p class="section-subtitle">Fill out the form and we'll call you within 2 hours.</p>
+    <div id="ghl-contact-form" style="border:2px dashed #d1d5db; padding:40px; text-align:center; min-height:150px; border-radius:8px; color:#6b7280; max-width:640px; margin:0 auto;">
+      <strong style="display:block; margin-bottom:8px; color:#374151;">📋 Contact Form</strong>
+      <p style="margin:0 0 16px;">Quote form activates after GHL setup.</p>
+      <a href="tel:+16475504003" aria-label="Call Mississauga Plumbing Services at (647) 550-4003"
+         style="display:inline-block; background:#e84040; color:white; padding:12px 24px; border-radius:6px; text-decoration:none; font-weight:700;">📞 Call (647) 550-4003 Instead</a>
+    </div>
+    <!-- GHL: paste contact form iFrame embed here -->
+  </div>
+</section>
+
+<!-- 12. BOOKING SECTION -->
+<section class="section" id="booking">
+  <div class="container">
+    <h2 class="section-title">Schedule Non-Emergency Plumbing Service</h2>
+    <p class="section-subtitle">For emergencies, call (647) 550-4003 — we answer 24/7.</p>
+    <div id="ghl-calendar" style="border:2px dashed #d1d5db; padding:40px; text-align:center; min-height:150px; border-radius:8px; color:#6b7280; max-width:640px; margin:0 auto;">
+      <strong style="display:block; margin-bottom:8px; color:#374151;">📅 Online Booking Calendar</strong>
+      <p style="margin:0 0 16px;">Online booking activates after GHL setup.</p>
+      <a href="tel:+16475504003" aria-label="Call Mississauga Plumbing Services at (647) 550-4003"
+         style="display:inline-block; background:#e84040; color:white; padding:12px 24px; border-radius:6px; text-decoration:none; font-weight:700;">📞 Call (647) 550-4003 to Schedule</a>
+    </div>
+    <!-- GHL: paste calendar iFrame embed here -->
+  </div>
+</section>
+
+<!-- 13. FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div class="footer-col">
+      <p class="footer-brand">Mississauga Plumbing Services</p>
+      <p>Your trusted local 24/7 plumbing professionals. We answer when others don't.</p>
+    </div>
+    <div class="footer-col">
+      <h3>Contact Us</h3>
+      <p><a href="tel:+16475504003" aria-label="Call Mississauga Plumbing Services" style="color:white; text-decoration:underline;">(647) 550-4003</a></p>
+      <p>Mississauga, ON</p>
+    </div>
+    <div class="footer-col">
+      <h3>Hours</h3>
+      <p class="footer-emergency">24/7 Emergency Service</p>
+      <p>Mon–Sun: 7:00 AM – 9:00 PM</p>
+      <p>Emergency calls: Anytime</p>
+      <a href="#" id="ghl-payment-link" class="pay-invoice">Pay Invoice</a>
+      <!-- GHL: replace href="#" with GHL payment link URL -->
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p>© <span id="year"></span> Mississauga Plumbing Services. All rights reserved. · Licensed &amp; Insured · Serving the GTA</p>
+  </div>
+</footer>
+
+<script>
+  // Dynamic year
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  // Header scroll shadow
+  window.addEventListener('scroll', function() {
+    document.querySelector('header').classList.toggle('scrolled', window.scrollY > 10);
+  });
+
+  // Progressive animation (respects prefers-reduced-motion)
+  document.addEventListener('DOMContentLoaded', function() {
+    if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      document.querySelectorAll('section').forEach(function(el) {
+        el.classList.add('anim-ready');
+      });
+      var obs = new IntersectionObserver(
+        function(entries) {
+          entries.forEach(function(e) {
+            if (e.isIntersecting) e.target.classList.add('anim-visible');
+          });
+        },
+        { threshold: 0.1 }
+      );
+      document.querySelectorAll('.anim-ready').forEach(function(el) {
+        obs.observe(el);
+      });
+    }
+  });
+</script>
+<div id="ghl-chat-widget"></div>
+</body>
+</html>

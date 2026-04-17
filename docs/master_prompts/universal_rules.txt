@@ -1,0 +1,229 @@
+================================================================================
+UNIVERSAL RULES — Layer 1
+Applies to EVERY home service website regardless of niche.
+Do NOT modify. Add niche rules in Layer 3 (niches/[trade].md).
+Last updated: March 2026
+================================================================================
+
+PHONE NUMBER RULES (NON-NEGOTIABLE)
+- All phone numbers MUST use href="tel:+1XXXXXXXXXX" — never plain text, never in images
+- Phone number visible in exactly 4 locations:
+    1. Sticky header (always visible on scroll)
+    2. Hero section (primary CTA button)
+    3. Mid-page (after services section)
+    4. Footer
+- Tap-to-call is the #1 conversion action for mobile users — make every instance clickable
+
+STRUCTURE & SECTIONS (required order for generic niche — trade may reorder)
+  1. Sticky header: logo + phone + "Missed a call? We'll text you back" badge
+  2. Hero: headline + subheadline with star rating + two CTA buttons + trust signal
+  3. GHL voice widget placeholder (between hero and trust bar — niche files may reorder)
+  4. Trust bar: 4 items (years, licensed/insured, emergency/guarantee, free estimate)
+  5. Services: card grid
+  6. Process: 4 steps → Call → Quote → Work → Done
+  7. Service areas: neighborhoods list + Google Maps iFrame
+  8. Reviews/testimonials: real GBP reviews + GHL reviews widget placeholder
+  9. Booking: GHL calendar placeholder
+  10. Contact/quote form: GHL form placeholder
+  11. Footer: 4 columns (logo+tagline, contact, location, hours)
+
+HEADER (STICKY)
+- Must remain visible at all times during scroll (position: sticky, top: 0, z-index: 50)
+- Contains: Logo (left) | Phone number (center-right, tap-to-call) | CTA button (right)
+- "Missed us? We'll text you back instantly" badge — small text below nav links
+- Mobile: logo + click-to-call button only (no nav clutter)
+
+HERO SECTION
+- H1 headline: lead with the primary customer need (not company name)
+- Subheadline: include star rating + review count if available
+  Example: "⭐⭐⭐⭐⭐ 4.9/5 based on 166 Google Reviews"
+- CTA Button 1: Primary action (trade-specific — see niche file)
+- CTA Button 2: Secondary action (trade-specific)
+- Trust signal under buttons: "Licensed & Insured • 15+ Years • Satisfaction Guaranteed"
+- NO video backgrounds (performance)
+- Hero image: real photo preferred; if none, use a single solid-color gradient panel
+
+TRUST BAR (immediately after hero)
+- 4 items in a horizontal row, each with an icon
+- Standard items (trade may override 1-2):
+    🏆 [X]+ Years Experience
+    ✅ Licensed & Fully Insured
+    [TRADE-SPECIFIC: e.g., "⚡ Available 24/7" or "💰 No Hidden Fees"]
+    📋 Free Estimates
+- Mobile: 2x2 grid
+
+SERVICES SECTION
+- Card grid: 3 columns desktop, 2 columns tablet, 1 column mobile
+- Each card: icon + service name + 1-line description
+- Emergency services first (if trade has emergency services)
+- "All Services" link to see more (optional)
+
+PROCESS SECTION (mandatory)
+- 4 steps, numbered, in a horizontal row (desktop) / vertical (mobile)
+  Step 1: Call Us or Book Online
+  Step 2: Fast Response / Free Quote
+  Step 3: Expert Service
+  Step 4: Your Satisfaction Guaranteed
+- Trade may rename steps but 4-step structure is mandatory
+
+SERVICE AREAS SECTION
+- List specific neighborhood names — NEVER "Greater [City] Area" or "Metro Area"
+  Wrong: "Greater Toronto Area" | Right: "Etobicoke, Mississauga, Brampton, Oakville..."
+- Google Maps iFrame embedded below neighborhood list
+  Use explicit coordinates in iFrame src to show correct area
+  Example: <iframe src="https://www.google.com/maps/embed/v1/place?key=...&q=..." ...>
+  If no Maps API key: use OSM embed as fallback
+- Mobile: map 100% width, 250px height minimum
+
+REVIEWS SECTION
+- Show 3 real reviews from extracted GBP data (verbatim, in quote cards)
+- Review card format: Star rating | Review text | Reviewer first name + "Google Reviewer"
+- Below review cards: GHL reviews widget placeholder div (see GHL PLACEHOLDERS below)
+- "Read all X reviews on Google" link (links to GBP listing)
+
+BOOKING SECTION
+- Clear heading: "Book Your [Service] Online" or "Schedule Service"
+- GHL calendar placeholder div (see GHL PLACEHOLDERS below)
+- Phone number as alternative: "Prefer to call? [PHONE]"
+- Section background: light contrast to stand out
+
+CONTACT/QUOTE SECTION
+- "Get a Free Quote" or "Get a Free Estimate" heading
+- GHL contact form placeholder div (see GHL PLACEHOLDERS below)
+- Response promise: "We respond within [X] hours" or "Same-day response guaranteed"
+
+FOOTER (4 columns)
+- Column 1: Logo + tagline + social icons (if available)
+- Column 2: Contact (phone tap-to-call, address only — NO email unless EMAIL variable is provided and non-empty)
+- Column 3: Service locations — list ALL neighborhoods from [SERVICE_AREAS], not just 5-6
+- Column 4: Business hours
+- Bottom bar: "© {new Date().getFullYear()} [Business Name]. All rights reserved."
+  MUST use dynamic year — never hardcode the year
+
+GHL PLACEHOLDER DIVS (all 6 required on every site)
+Insert exactly as written. Do not rename IDs. Do not remove.
+
+<!-- 1. Voice/Chat Widget — between hero and trust bar -->
+<div id="ghl-voice-inline" style="width:100%; min-height:80px;
+  background:#f5f5f5; border:2px dashed #ccc; border-radius:8px;
+  display:flex; align-items:center; justify-content:center; padding:20px;">
+  <p style="color:#999; text-align:center; margin:0;">
+    🎙️ Voice AI Widget — activates after GHL setup
+  </p>
+</div>
+<!-- GHL: paste inline voice JS snippet here -->
+
+<!-- 2. Booking calendar — in booking section -->
+<div id="ghl-calendar" style="width:100%; min-height:150px;
+  border:2px dashed #ccc; border-radius:8px; display:flex;
+  align-items:center; justify-content:center;">
+  <p style="color:#999; margin:0;">Booking Calendar loads here (GHL embed)</p>
+</div>
+<!-- GHL: paste calendar iFrame embed here -->
+
+<!-- 3. Contact form — in contact/quote section -->
+<div id="ghl-contact-form" style="width:100%; min-height:150px;
+  border:2px dashed #ccc; border-radius:8px; display:flex;
+  align-items:center; justify-content:center;">
+  <p style="color:#999; margin:0;">Contact Form loads here (GHL embed)</p>
+</div>
+<!-- GHL: paste contact form iFrame embed here -->
+
+<!-- 4. Live reviews — below testimonials -->
+<div id="ghl-reviews" style="width:100%; min-height:150px;
+  border:2px dashed #ccc; border-radius:8px; display:flex;
+  align-items:center; justify-content:center;">
+  <p style="color:#999; margin:0;">Live Google Reviews load here (GHL embed)</p>
+</div>
+<!-- GHL: paste reviews widget JS snippet here -->
+
+<!-- 5. Pay Invoice — in footer -->
+<a href="#" id="ghl-payment-link" style="display:inline-block;
+  background:#1a2744; color:white; padding:10px 24px;
+  border-radius:6px; text-decoration:none; font-size:14px;">
+  Pay Invoice
+</a>
+<!-- GHL: replace href="#" with your GHL payment link URL -->
+
+<!-- 6. Chat/voice floating widget — last element before </body> -->
+<div id="ghl-chat-widget" style="height:0; min-height:0; padding:0; margin:0; line-height:0;"></div>
+<!-- GHL: paste chat/voice widget JS snippet here before </body> -->
+
+TECHNICAL REQUIREMENTS
+- React + Tailwind CSS (compatible with Bolt.new, Lovable, v0, AI Studio)
+- Mobile-first: design for 390px width first, then scale up
+- No video backgrounds
+- No table-based layouts
+- Semantic HTML: h1, h2, article, section, nav (for SEO indexability)
+- HTTPS: provided automatically by Netlify / Lovable hosting
+- Dynamic copyright year: {new Date().getFullYear()} — never hardcode
+- Favicon: professional SVG or PNG — never use Vite default (/vite.svg)
+- OG meta tags in index.html:
+    og:title     → "[Business Name] | [City] [Trade]"
+    og:description → "[Trade] in [City]. [Rating] stars. Call [phone]."
+    og:image     → hero image or logo URL
+- Remove any builder badges (Bolt, Lovable) from deployed HTML
+
+DESIGN PRINCIPLES
+- Professional, clean, not cluttered
+- Trust-first: every section should reduce doubt
+- Speed-first: no heavy animations, no video, compressed images
+- Whitespace: generous — avoid looking cheap or DIY
+- Real photos always beat stock — style placeholder comments where photos unavailable
+
+LOGO HANDLING (H9)
+If a LOGO_URL is provided: render as <img> in the sticky header left slot.
+  Download and self-host the logo file in the project — do NOT hotlink from
+  the original URL. External logos break if the prospect's old site goes down.
+  <img src="./logo.png" alt="[BUSINESS_NAME]" style="height:40px; width:auto;">
+
+If LOGO_URL is empty or missing: render the business name as text in the header,
+  accompanied by the trade's icon emoji ([NICHE_ICON_EMOJI]) as an inline element.
+  Do NOT use a placeholder box, broken img tag, or generic image.
+  <span style="font-weight:700; font-size:1.1rem; color:white;">
+    [NICHE_ICON_EMOJI] [BUSINESS_NAME]
+  </span>
+  Optional: Claude may generate a simple inline SVG trade icon (wrench, flame, bolt,
+  house, leaf) using the primary and accent colors — keep it under 5 SVG paths.
+
+GHL PLACEHOLDER RENDERING — PACKAGE TIER RULES (H8)
+GHL embeds only activate after the client's GHL account is connected.
+On Package 1 (website only — no GHL setup), the placeholder divs render as empty
+dashed boxes. This looks broken to the client. Apply these fallback rules:
+
+When GHL is NOT yet connected (demo sites and Package 1 delivery):
+  Calendar div (#ghl-calendar): render a phone CTA fallback INSIDE the div:
+    <div id="ghl-calendar" style="border:2px dashed #ccc; border-radius:8px;
+      padding:40px; text-align:center; color:#666; font-size:0.95rem;">
+      <p style="margin:0 0 12px;">📅 <strong>Book by Phone</strong></p>
+      <a href="tel:+[PHONE_DIGITS]" style="display:inline-block;
+        background:[ACCENT_COLOR]; color:white; padding:12px 28px;
+        border-radius:6px; text-decoration:none; font-weight:700;">
+        Call [PHONE] to Schedule
+      </a>
+      <p style="margin:12px 0 0; font-size:0.85rem; color:#999;">
+        Online booking activates after setup — call us anytime.
+      </p>
+    </div>
+  Contact form div (#ghl-contact-form): same pattern — show phone CTA.
+  Voice widget (#ghl-voice-inline): hide entirely (display:none) until GHL connected.
+  Reviews widget (#ghl-reviews): leave visible as dashed placeholder — it looks
+    intentional alongside the 3 real review cards above it.
+  Payment link (#ghl-payment-link): set href="#" — renders as greyed-out button.
+  Chat widget (#ghl-chat-widget): leave empty (height:0) — invisible when not connected.
+
+When GHL IS connected (Package 2+ or after Package 1 upsell):
+  Replace the fallback content with the GHL embed snippet.
+  The div IDs are preserved so the swap is a one-line paste — no layout changes needed.
+
+WHAT TO OMIT (common builder mistakes)
+- ❌ No login / user accounts
+- ❌ No on-site Stripe checkout (use payment link button only)
+- ❌ No blog section (unless explicitly requested)
+- ❌ No pricing page (request quote flow only)
+- ❌ No "Under Construction" pages
+- ❌ No placeholder Lorem Ipsum text in final output
+- ❌ No duplicate GHL divs (one ghl-chat-widget only, no ghl-widget alias)
+- ❌ No blank space below footer (GHL div with no content — add min-height:0)
+- ❌ No hotlinked external logos — always self-host the logo file in the project
+================================================================================

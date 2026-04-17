@@ -1,0 +1,5 @@
+#!/bin/sh
+# Runs the template-parity check before every commit.
+# Bypass with: git commit --no-verify
+python tools/check_template_parity.py
+exit $?

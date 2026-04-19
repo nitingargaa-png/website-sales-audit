@@ -131,15 +131,17 @@ Then:
    FSM detected = they understand software investment, easier automation sell.
    ServiceTitan detected = decision-maker is likely GM or Ops Manager, NOT owner.
 
-   **Booking flow sophistication tiers — assess which tier applies:**
+   See *Booking Sophistication Tiers* below for how to assess which tier applies.
 
-   TIER 1 — Basic (simple HTML contact form, mailto: link, or phone number only)
+### Booking Sophistication Tiers
+
+#### Tier 1 — Basic (simple HTML contact form, mailto: link, or phone number only)
    → Major gap. Rate Check 10 ❌.
 
-   TIER 2 — Standard (embedded form with name/phone/service fields, no calendar)
+#### Tier 2 — Intermediate (embedded form with name/phone/service fields, no calendar)
    → Functional but limited. Rate Check 10 ⚠️ unless response automation is evident.
 
-   TIER 3 — Advanced (multi-step wizard, calendar scheduling, real-time availability)
+#### Tier 3 — Advanced (multi-step wizard, calendar scheduling, real-time availability)
    Signals of a Tier 3 flow:
    - Multi-step progress bar (Issue → Details → Customer → Schedule → Confirm)
    - Service category selection screen (customer picks service type first)
@@ -322,9 +324,13 @@ Then:
    in client-facing reports. Never shame the client.
    If no competitor can be found or fetched, skip — do not fabricate.
 
+### If the site won't load — hard abort
+
 **If the site won't load:** Stop and output:
 > ⚠️ I wasn't able to load this website. It may be down or blocking automated access.
 > Please check the URL and try again.
+
+---
 
 **Do not fabricate details for pages you could not access.** If a page returns a 404
 or is missing, note it as missing — do not assume what it contains.
@@ -2411,15 +2417,15 @@ Set **`true`** when you observe one or more of:
 
 - "24/7" or "emergency" language on the homepage paired with Mon–Fri or
   "1 business day" response language on the contact page (Phase 1 Step 5,
-  missed-call/response gap signals at SKILL.md 776–782)
+  missed-call/response gap signals — see MISSED-CALL / RESPONSE GAP SIGNALS)
 - No visible chat widget AND no tap-to-call in the page source — any
   caller who gets voicemail is a lost lead (Phase 1 Step 5B)
 - Public Gmail/Yahoo address as the primary contact (Phase 1 Step 5 —
-  Gmail signal at SKILL.md 811)
+  Gmail signal — see LEAD CAPTURE & FORM SIGNALS)
 - Existing chat widget present but public review complaints mention slow
   or missed follow-up (Phase 1 Step 5B + GBP review sampling)
 - GBP review volume of 50+ with no MCTB vendor or GHL script detected
-  (Phase 1 Step 5A/C + review system signals at SKILL.md 786–794)
+  (Phase 1 Step 5A/C + review system signals — see REVIEW SYSTEM SIGNALS)
 - Call tracking installed (CallRail/CallFire/Marchex) with no visible
   automation around the tracked number (Phase 1 Step 5H) — paid ads are
   active and every missed call was paid for
@@ -2427,7 +2433,7 @@ Set **`true`** when you observe one or more of:
 Set **`false`** when you observe one or more of:
 
 - ServiceTitan Tier 3 booking with SMS consent embedded in the flow
-  (Phase 1 Step 5C, Tier 3 signals at SKILL.md 142–157) — their FSM
+  (Phase 1 Step 5C, Tier 3 signals — see Booking Sophistication Tiers → Tier 3 — Advanced) — their FSM
   already covers inbound response at scale
 - Existing MCTB vendor detected (GHL, Podium, Mav.ai) with no public
   complaints about missed response — this is a replacement pitch, not a
@@ -2460,7 +2466,7 @@ Set **`true`** when you observe one or more of:
   with no answering-layer vendor visible
 - After-hours overflow signal: 24/7/emergency language on site with no
   live-answer coverage stated AND no chat widget (Phase 1 Step 5B
-  combined with missed-call gap signals at SKILL.md 776–782)
+  combined with missed-call gap signals — see MISSED-CALL / RESPONSE GAP SIGNALS)
 - Emergency-dominant niche (roofing storm response, glass emergency,
   plumbing leak) with a contact page that routes to voicemail or to a
   next-business-day form
@@ -2508,12 +2514,12 @@ Emit when any of the following are observed:
 
 - Franchise footer language: "independently owned and operated franchise
   of [National Brand]", "a [Brand] franchise", or similar disclosure
-  (Phase 1 Step 5A footer scan + DISQUALIFIER SIGNALS at SKILL.md 854)
+  (Phase 1 Step 5A footer scan — see DISQUALIFIER SIGNALS → Franchise footer row)
 - Enterprise FSM (ServiceTitan multi-location, Housecall Pro with 10+
   locations listed) combined with explicit multi-state or multi-city
-  service area (Phase 1 Step 5C + SKILL.md 855)
+  service area (Phase 1 Step 5C — see DISQUALIFIER SIGNALS → Enterprise FSM row)
 - Site lists "3+ states/regions" as service area or describes itself as
-  "expanding nationally" (SKILL.md 857)
+  "expanding nationally" (see DISQUALIFIER SIGNALS → Expanding rapidly row)
 
 Leave absent when the business is a single-location SMB, even if the
 business name sounds corporate. A franchise-style name alone is not
@@ -2587,8 +2593,8 @@ parking page", "Sedo parking", Afternic listings, or a registrar
 default landing page with no business-specific content at all.
 
 Do NOT emit for sites that simply fail to load — those trigger the
-site-won't-load abort at SKILL.md 325–327 and do not produce a
-TRIAGE_META block at all. Do NOT emit for degraded-but-real sites
+site-won't-load hard abort (see If the site won't load — hard abort)
+and do not produce a TRIAGE_META block at all. Do NOT emit for degraded-but-real sites
 (broken images, slow loading, missing pages) — those get audited
 normally.
 

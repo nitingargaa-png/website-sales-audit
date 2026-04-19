@@ -553,6 +553,8 @@ def rules_site_structure(business_data: dict) -> str:
         "cleaning":     "#0077b6, #ffffff",
         "pest_control": "#386641, #bc4749",
         "painting":     "#2b4590, #e8a838",
+        "glass":        "#1b3a57, #7dd3fc",
+        "garage_door":  "#2f2f2f, #d4a017",
         "generic":      "#1a3a6b, #e84040",
     }
     niche_color_fallback = NICHE_DEFAULTS.get(niche, NICHE_DEFAULTS["generic"])

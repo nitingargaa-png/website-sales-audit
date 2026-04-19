@@ -2317,6 +2317,12 @@ downstream automation will reject the file.
 - Use a fenced code block with the language identifier `triage-meta`.
 - The payload inside the fence is YAML with the keys listed below.
 - If a field is genuinely unknown, use `null` — never an empty string.
+- For judgment-based fields (`mctb_applicable`, `vaai_applicable`, and
+  others covered below), emit a confident value only when Phase 1
+  findings or visible audit content support it. When signals are mixed
+  or absent, emit `null` rather than guessing. Do not infer
+  applicability from typical-industry patterns alone — ground every
+  judgment in this prospect's observed evidence.
 
 ### Required fields
 
@@ -2358,6 +2364,87 @@ Set **`false`** for:
 - Prospects with major problems we can solve but no existing platform to
   migrate FROM (first-time buyer, not an upgrade)
 - Solo operators running the business from a phone and a WordPress site
+
+### `mctb_applicable` — expanded definition
+
+Missed-call text-back is a meaningful lift when the prospect currently
+loses inbound calls with no automated recovery path. Judge from Phase 1
+findings and visible audit content — not from the trade alone.
+
+Set **`true`** when you observe one or more of:
+
+- "24/7" or "emergency" language on the homepage paired with Mon–Fri or
+  "1 business day" response language on the contact page (Phase 1 Step 5,
+  missed-call/response gap signals at SKILL.md 740–746)
+- No visible chat widget AND no tap-to-call in the page source — any
+  caller who gets voicemail is a lost lead (Phase 1 Step 5B)
+- Public Gmail/Yahoo address as the primary contact (Phase 1 Step 5 —
+  Gmail signal at SKILL.md 775)
+- Existing chat widget present but public review complaints mention slow
+  or missed follow-up (Phase 1 Step 5B + GBP review sampling)
+- GBP review volume of 50+ with no MCTB vendor or GHL script detected
+  (Phase 1 Step 5A/C + review system signals at SKILL.md 750–758)
+- Call tracking installed (CallRail/CallFire/Marchex) with no visible
+  automation around the tracked number (Phase 1 Step 5H) — paid ads are
+  active and every missed call was paid for
+
+Set **`false`** when you observe one or more of:
+
+- ServiceTitan Tier 3 booking with SMS consent embedded in the flow
+  (Phase 1 Step 5C, Tier 3 signals at SKILL.md 137–152) — their FSM
+  already covers inbound response at scale
+- Existing MCTB vendor detected (GHL, Podium, Mav.ai) with no public
+  complaints about missed response — this is a replacement pitch, not a
+  gap pitch
+- Appointment-only business with visible calendar and automated
+  confirmation — inbound calls are rare and already channeled elsewhere
+
+When signals are mixed or genuinely unobservable, emit `null` rather than
+guessing.
+
+### `vaai_applicable` — expanded definition
+
+Voice AI fits prospects who receive enough call volume that an answering
+layer would meaningfully reduce lost leads, AND whose call pattern has
+clear after-hours or overflow gaps. Do not emit `true` based on trade
+typicality alone — voice AI is not universally applicable, and marking
+it applicable for every plumber/HVAC prospect dilutes downstream routing.
+
+Call volume is not a Phase 1 detection field. Infer it from visible
+proxies: GBP review velocity (reviews per month sustained), FSM
+sophistication, and "24/7 / emergency" claims paired with a small-shop
+operator profile (one phone number, single owner on About page, no FSM
+vendor detected) — this profile implies the owner personally fields
+calls and overflows to voicemail during jobs.
+
+Set **`true`** when you observe one or more of:
+
+- High review velocity suggested by GBP data (Phase 1 Step 5D — 100+
+  reviews total OR 3+ reviews/month sustained over 12+ months) combined
+  with no answering-layer vendor visible
+- After-hours overflow signal: 24/7/emergency language on site with no
+  live-answer coverage stated AND no chat widget (Phase 1 Step 5B
+  combined with missed-call gap signals at SKILL.md 740–746)
+- Emergency-dominant niche (roofing storm response, glass emergency,
+  plumbing leak) with a contact page that routes to voicemail or to a
+  next-business-day form
+- Small-shop operator profile (solo owner named on About page, one phone
+  number, no FSM detected) with sustained high review activity — owner
+  is the bottleneck on every inbound call
+
+Set **`false`** when you observe one or more of:
+
+- Existing answering-service vendor detected (Smith.ai, visible "our
+  office is always staffed" language, or similar) — voice AI replaces
+  an already-solved layer, harder sell
+- ServiceTitan Tier 3 with live dispatch and SMS consent flow — dispatch
+  already answers at scale
+- Low review volume (<10) suggesting the prospect simply does not field
+  enough calls for voice AI to matter
+
+When call volume cannot be estimated from visible evidence and no
+after-hours gap is observable, emit `null` rather than defaulting to
+`true` on trade typicality.
 
 ### Allowed disqualifier values
 

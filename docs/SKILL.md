@@ -64,7 +64,12 @@ Then:
    - /services
 3. From the fetched content, identify:
    - Business name
-   - City/town and trade or industry
+   - City/town
+   - Province/state (required — needed for downstream routing; if not
+     visible on the homepage, check the contact/footer pages. If still
+     not extractable, note as unknown and emit `null` downstream
+     rather than guessing.)
+   - Trade or industry
    - Current date for the report header
 4. Note the copyright year in the footer (if visible) — an old year signals neglect.
 
@@ -262,6 +267,37 @@ Then:
    Validation note: structured data is often JS-injected and won't appear in raw HTML
    fetch. If not visible in fetch, suggest running Google's Rich Results Test
    (search.google.com/test/rich-results) on the URL to confirm.
+
+   **M) UNDER-CONSTRUCTION / PLACEHOLDER SITE — check for:**
+
+   The site loads (distinct from the won't-load abort case above) but
+   appears to be a placeholder rather than a real business site:
+
+   - "Coming Soon", "Under Construction", "Site Launching Soon", or
+     "Check Back Later" banner or hero text
+   - Default CMS taglines ("Just another WordPress site", "My Site" as
+     the page title, Wix/Squarespace default hero copy)
+   - Lorem ipsum text anywhere in visible content
+   - No services listed, no contact info, and no business name in the
+     visible HTML beyond the domain
+   - Registrar/parking signals: "This domain is for sale",
+     "GoDaddy parking page", "Sedo parking" in page text or meta
+   - Copyright year is the current year with no other history and no
+     real content (likely newly registered, not yet built)
+
+   If two or more of these signals are present: flag the site as
+   under-construction. Record in the Feature Detection Summary table.
+   Note in Talking Points that this prospect is not ready for outreach
+   yet — revisit in 30–60 days.
+
+   This detection is distinct from the site-won't-load abort at the
+   end of this Phase: that abort fires when the URL fails to resolve
+   or returns no usable content. `under_construction` fires when the
+   site DOES load but contains only placeholder content. Both paths
+   emit into the `disqualifiers` list (under_construction or
+   dead_site respectively) — except the won't-load abort halts the
+   audit before TRIAGE_META is emitted at all. Dead-site abort
+   behavior is unchanged in this commit.
 
    Record all findings in the Feature Detection Summary table (output in Talking Points).
 
@@ -2375,15 +2411,15 @@ Set **`true`** when you observe one or more of:
 
 - "24/7" or "emergency" language on the homepage paired with Mon–Fri or
   "1 business day" response language on the contact page (Phase 1 Step 5,
-  missed-call/response gap signals at SKILL.md 740–746)
+  missed-call/response gap signals at SKILL.md 776–782)
 - No visible chat widget AND no tap-to-call in the page source — any
   caller who gets voicemail is a lost lead (Phase 1 Step 5B)
 - Public Gmail/Yahoo address as the primary contact (Phase 1 Step 5 —
-  Gmail signal at SKILL.md 775)
+  Gmail signal at SKILL.md 811)
 - Existing chat widget present but public review complaints mention slow
   or missed follow-up (Phase 1 Step 5B + GBP review sampling)
 - GBP review volume of 50+ with no MCTB vendor or GHL script detected
-  (Phase 1 Step 5A/C + review system signals at SKILL.md 750–758)
+  (Phase 1 Step 5A/C + review system signals at SKILL.md 786–794)
 - Call tracking installed (CallRail/CallFire/Marchex) with no visible
   automation around the tracked number (Phase 1 Step 5H) — paid ads are
   active and every missed call was paid for
@@ -2391,7 +2427,7 @@ Set **`true`** when you observe one or more of:
 Set **`false`** when you observe one or more of:
 
 - ServiceTitan Tier 3 booking with SMS consent embedded in the flow
-  (Phase 1 Step 5C, Tier 3 signals at SKILL.md 137–152) — their FSM
+  (Phase 1 Step 5C, Tier 3 signals at SKILL.md 142–157) — their FSM
   already covers inbound response at scale
 - Existing MCTB vendor detected (GHL, Podium, Mav.ai) with no public
   complaints about missed response — this is a replacement pitch, not a
@@ -2424,7 +2460,7 @@ Set **`true`** when you observe one or more of:
   with no answering-layer vendor visible
 - After-hours overflow signal: 24/7/emergency language on site with no
   live-answer coverage stated AND no chat widget (Phase 1 Step 5B
-  combined with missed-call gap signals at SKILL.md 740–746)
+  combined with missed-call gap signals at SKILL.md 776–782)
 - Emergency-dominant niche (roofing storm response, glass emergency,
   plumbing leak) with a contact page that routes to voicemail or to a
   next-business-day form
@@ -2455,6 +2491,109 @@ Emit any of these strings in the `disqualifiers` list when detected:
 - `out_of_service_area` — not US/Canada
 - `wrong_trade` — not one of the home service trades listed above
 - `dead_site` — domain resolves but site 404s or is parked
+
+### `disqualifiers` — expanded definition
+
+Emit each enum string independently — the field is a list, and multiple
+disqualifiers can coexist (e.g., a non-US/Canada franchise would emit
+both `national_chain` and `out_of_service_area`). Default is empty list
+`[]`. Apply the Rules-section grounding: emit a value only when Phase 1
+findings or visible audit content support it; when a disqualifier is
+ambiguous or signals are absent, leave it out of the list rather than
+guessing.
+
+#### `national_chain`
+
+Emit when any of the following are observed:
+
+- Franchise footer language: "independently owned and operated franchise
+  of [National Brand]", "a [Brand] franchise", or similar disclosure
+  (Phase 1 Step 5A footer scan + DISQUALIFIER SIGNALS at SKILL.md 854)
+- Enterprise FSM (ServiceTitan multi-location, Housecall Pro with 10+
+  locations listed) combined with explicit multi-state or multi-city
+  service area (Phase 1 Step 5C + SKILL.md 855)
+- Site lists "3+ states/regions" as service area or describes itself as
+  "expanding nationally" (SKILL.md 857)
+
+Leave absent when the business is a single-location SMB, even if the
+business name sounds corporate. A franchise-style name alone is not
+sufficient — the franchise disclosure must be visible.
+
+#### `under_construction`
+
+Emit when the Phase 1 Step 5M detection flagged the site as a
+placeholder (two or more of: "Coming Soon" banner, default CMS
+taglines, lorem ipsum content, no services/contact info, registrar
+parking signals, current-year copyright with no other history).
+
+Leave absent when the site has real content, even if the content is
+amateur-quality or outdated. "Bad website" is not "placeholder site."
+
+#### `out_of_service_area`
+
+Semantic: **not US/Canada**. This is a binary check against the
+country-level target market. It is narrower than "outside our
+primary market" — a US-based prospect in a state we rarely pitch to
+is NOT `out_of_service_area`.
+
+Emit only when ALL of the following are true:
+
+- Phase 1 Step 3 extracted both a clear city AND a clear
+  province/state
+- The city + province/state pair unambiguously places the business
+  outside US/Canada (e.g., Manchester, UK; Mumbai, India; Sydney,
+  NSW, Australia)
+- No countervailing signal on the site suggests a US/Canada branch
+  or service area
+
+Leave absent when:
+
+- Either city or province/state is missing or ambiguous in Phase 1
+  extraction
+- The visible location is unambiguously in US/Canada
+- Signals are mixed (head-office-elsewhere case — see below)
+
+**Head-office edge case.** A national franchise whose head office is
+in US/Canada but whose audited page serves an outside-region branch
+does NOT emit `out_of_service_area` — emit `national_chain` instead,
+which is the more informative signal for downstream routing. Symmetric
+case: a non-US/Canada HQ with a US/Canada branch page emits neither
+disqualifier if the audited page is genuinely in-market; these are
+`national_chain` candidates regardless of HQ location.
+
+**Forward-compat hook for resolved-address data.** If a future pipeline
+change surfaces a resolved business address (e.g., from Google Places
+`formattedAddress`), prefer that address for the OOSA judgment over
+visible page content. Until then, the rule above uses Phase 1 Step 3
+extraction only.
+
+#### `wrong_trade`
+
+Emit when the Phase 1 Step 3 trade identification places the business
+outside the home-service trades supported by this skill: plumbing,
+HVAC, cleaning, landscaping, electrical, pest control, painting,
+garage door, roofing, glass.
+
+Leave absent when the trade is in scope, OR when the trade cannot be
+confidently determined from the site (emit no disqualifier and note
+the ambiguity in Talking Points rather than guessing).
+
+#### `dead_site`
+
+Emit when the site LOADS (returns a 200-OK HTTP response) but the
+content is clearly a parked/registrar placeholder rather than an
+actual business site. Signals: "This domain is for sale", "GoDaddy
+parking page", "Sedo parking", Afternic listings, or a registrar
+default landing page with no business-specific content at all.
+
+Do NOT emit for sites that simply fail to load — those trigger the
+site-won't-load abort at SKILL.md 325–327 and do not produce a
+TRIAGE_META block at all. Do NOT emit for degraded-but-real sites
+(broken images, slow loading, missing pages) — those get audited
+normally.
+
+Leave absent when the site loads with any genuine business content,
+even if the content is minimal.
 
 ### Example
 

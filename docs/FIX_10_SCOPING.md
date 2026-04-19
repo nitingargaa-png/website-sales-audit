@@ -253,6 +253,63 @@ Whichever variant is picked, the next session should:
 5. For D specifically: start with per-function analysis of
    the 4 drifted functions (Q1) as a read-only discovery turn
 
+## Verdict (2026-04-19) — Q1 resolved
+
+Q1 answered: the 4 builder-only functions are **all 4 deliberate
+post-audit-only**, not drift. Per-function analysis:
+
+| Function | Input source | Verdict |
+|---|---|---|
+| `rules_booking_tier` | `features.get("booking_tier")` | Deliberate post-audit-only |
+| `rules_platform` | `features.get("platform")` | Deliberate post-audit-only |
+| `rules_feature_signals` | 7 keys from `features` (ads_pixel, call_tracking, social_media, invoice_payment, financing_widget, membership_plan, appointment_reminder) | Deliberate post-audit-only |
+| `rules_icp_framing` | 3 keys from `icp` (icp_strength, decision_maker, sales_cycle) | Deliberate post-audit-only |
+
+All inputs trace back to `findings["feature_detection"]` or
+`findings["icp_signals"]`, both produced by `parse_audit.py` —
+a module that exists only in `website-audit-builder`. Sales-audit
+has no pathway to populate these dicts, so the 4 functions are
+structurally unreachable from sales-audit's orchestrator. Nothing
+to back-port.
+
+### Architectural implication
+
+The two-orchestrator split is **intentional and correct at the
+4-function boundary.** Demo (pre-sale, sales-audit) genuinely
+cannot invoke these 4 functions; production (post-sale, builder)
+genuinely can. The `findings_to_layer2.py` line-count divergence
+(798 vs 1050) is the structural consequence of this correct
+split, not accidental drift.
+
+### Side observation — separate drift surfaced
+
+Reconnaissance surfaced one piece of drift in a **shared**
+function (`rules_site_structure`): the `NICHE_DEFAULTS` table
+has `glass` and `garage_door` entries in builder that are
+absent in sales-audit. This is distinct from the 4-function
+verdict above and is tracked as a separate follow-up (see
+commit message on the follow-up back-port commit).
+
+### Status of A / B / C
+
+- **B** (generate Layer 2 from scrape data only) — still open
+  as a future scope option, but independent of the drift
+  question. Depends on Q5 (does demo output feel too thin in
+  practice?). Not blocked by anything this verdict changes.
+- **A** (shallow audit before demo) — still open; independent.
+- **C** (consolidate orchestrators) — **weakened** by this
+  verdict. The split at the 4-function boundary is real and
+  intentional; consolidation would re-introduce the
+  reachability question it naturally resolves.
+
+### Memo status going forward
+
+This memo is no longer purely pre-decision. Q1 is closed. Q2-Q5
+remain open and scoped to future A / B work. Per the memo's
+meta note, when A / B / C ultimately ship (or are explicitly
+dropped), this file should be archived or deleted. Until then
+it retains provenance.
+
 ## Related references
 
 - `website-sales-audit/docs/SYSTEM_DESIGN_v2.1.md §The

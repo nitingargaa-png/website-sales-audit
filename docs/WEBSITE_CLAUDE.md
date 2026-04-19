@@ -411,6 +411,35 @@ the last content in the audit file.
 
 Unknown fields are represented as `null` (not empty string, not omitted).
 
+### Downstream gate routing
+
+TRIAGE_META fields drive two audit-mode gates in ghl-triage, both
+running ahead of scoring:
+
+- `mctb_applicable` and `vaai_applicable` route to the **Fix 7
+  applicability gate** (ghl-triage's `_is_skipped_by_applicability`
+  helper in `prospect_triage.py`, invoked at Step 3.5).
+  Service-specific — only the MCTB or VAAI invocation for the
+  prospect is skipped when its flag is explicitly `False`. GRM and
+  WEB always pass. Only explicit `False` fires the gate; `null`,
+  missing, or `True` all pass through. Skipped services get a
+  `Skip` CSV row with `classification_reason="mctb_not_applicable_per_audit"`
+  or `"vaai_not_applicable_per_audit"`, plus a Haiku-authored
+  `[NOT APPLICABLE]` MD section.
+- `disqualifiers` routes to the **Fix 8 disqualifier gate**
+  (ghl-triage's `_is_skipped_by_audit_disqualifiers` helper in
+  `prospect_triage.py`, invoked at Step 3.4). Prospect-level and
+  service-agnostic — any non-empty list skips the prospect for
+  all four services with `classification_reason="disqualified_per_audit"`,
+  a `Skip` CSV row, and a Haiku-authored `[DISQUALIFIED]` MD
+  section that quotes the codes verbatim. Fix 8 runs before
+  Fix 7; if both would fire, Fix 8 wins.
+
+`ghl_upgrade_candidate` is not gate-routed. It feeds scoring and
+template-selection context — when `true`, ghl-triage's
+talking-point router selects the MIGRATION or UPGRADE template
+instead of STANDARD. No skip decision is derived from it.
+
 ### `ghl_upgrade_candidate` — expanded definition
 
 The word "upgrade" here means **lateral migration**, not "first-time sale." A
@@ -438,13 +467,224 @@ Set **`false`** for:
   migrate FROM (first-time buyer, not an upgrade)
 - Solo operators running the business from a phone and a WordPress site
 
+### `mctb_applicable` — expanded definition
+
+Missed-call text-back is a meaningful lift when the prospect currently
+loses inbound calls with no automated recovery path. Judge from audit
+findings and visible content — not from the trade alone.
+
+Set **`true`** when you observe one or more of:
+
+- "24/7" or "emergency" language on the homepage paired with Mon–Fri or
+  "1 business day" response language on the contact page
+- No visible chat widget AND no tap-to-call in the page source — any
+  caller who gets voicemail is a lost lead
+- Public Gmail/Yahoo address as the primary contact
+- Existing chat widget present but public review complaints mention slow
+  or missed follow-up (supported by public review sampling)
+- GBP review volume of 50+ with no MCTB vendor or GHL script detected
+- Call tracking installed (CallRail/CallFire/Marchex) with no visible
+  automation around the tracked number — paid ads are active and every
+  missed call was paid for
+
+Set **`false`** when you observe one or more of:
+
+- ServiceTitan Tier 3 booking with SMS consent embedded in the flow
+  — their FSM already covers inbound response at scale
+- Existing MCTB vendor detected (GHL, Podium, Mav.ai) with no public
+  complaints about missed response — this is a replacement pitch, not a
+  gap pitch
+- Appointment-only business with visible calendar and automated
+  confirmation — inbound calls are rare and already channeled elsewhere
+
+When signals are mixed or genuinely unobservable, emit `null` rather than
+guessing.
+
+### `vaai_applicable` — expanded definition
+
+Voice AI fits prospects who receive enough call volume that an answering
+layer would meaningfully reduce lost leads, AND whose call pattern has
+clear after-hours or overflow gaps. Do not emit `true` based on trade
+typicality alone — voice AI is not universally applicable, and marking
+it applicable for every plumber/HVAC prospect dilutes downstream routing.
+
+Call volume is not directly observable. Infer it from visible
+proxies: GBP review velocity (reviews per month sustained), FSM
+sophistication, and "24/7 / emergency" claims paired with a small-shop
+operator profile (one phone number, single owner on About page, no FSM
+vendor detected) — this profile implies the owner personally fields
+calls and overflows to voicemail during jobs.
+
+Set **`true`** when you observe one or more of:
+
+- High review velocity suggested by GBP data (100+ reviews total OR
+  3+ reviews/month sustained over 12+ months) combined with no
+  answering-layer vendor visible
+- After-hours overflow signal: 24/7/emergency language on site with no
+  live-answer coverage stated AND no chat widget
+- Emergency-dominant niche (roofing storm response, glass emergency,
+  plumbing leak) with a contact page that routes to voicemail or to a
+  next-business-day form
+- Small-shop operator profile (solo owner named on About page, one phone
+  number, no FSM detected) with sustained high review activity — owner
+  is the bottleneck on every inbound call
+
+Set **`false`** when you observe one or more of:
+
+- Existing answering-service vendor detected (Smith.ai, visible "our
+  office is always staffed" language, or similar) — voice AI replaces
+  an already-solved layer, harder sell
+- ServiceTitan Tier 3 with live dispatch and SMS consent flow — dispatch
+  already answers at scale
+- Low review volume (<10) suggesting the prospect simply does not field
+  enough calls for voice AI to matter
+
+When call volume cannot be estimated from visible evidence and no
+after-hours gap is observable, emit `null` rather than defaulting to
+`true` on trade typicality.
+
 ### Allowed `disqualifiers` values
 
-- `national_chain` — franchise/enterprise, not SMB
-- `under_construction` — site is a placeholder
-- `out_of_service_area` — not US/Canada
-- `wrong_trade` — not one of the home service trades listed above
-- `dead_site` — domain resolves but site 404s or is parked
+Any non-empty `disqualifiers` list triggers ghl-triage's Fix 8
+prospect-level disqualifier gate (the `_is_skipped_by_audit_disqualifiers`
+helper in `prospect_triage.py`, invoked at Step 3.4): the prospect
+is skipped for all four services with
+`classification_reason="disqualified_per_audit"`, a Skip row is
+written to the CSV, and a Haiku-authored `[DISQUALIFIED]` section
+is appended to the MD file with the codes surfaced verbatim in the
+operator note. Per-value semantics below inform the note; they do
+not change the gate's behavior. See *Downstream gate routing* above
+for how this compares to the Fix 7 applicability gate.
+
+- `national_chain` — Franchise or enterprise operation with documented
+  multi-location presence or "independently owned franchise of [Brand]"
+  disclosure. Single-location SMBs with corporate-sounding names do
+  NOT qualify.
+- `under_construction` — Site loads but contains only placeholder
+  content (coming-soon banners, default CMS taglines, lorem ipsum,
+  registrar parking signals). Distinct from "site won't load", which
+  aborts the audit before TRIAGE_META is emitted.
+- `out_of_service_area` — Business located outside US/Canada (binary
+  country check, not a within-US regional preference).
+- `wrong_trade` — Primary trade is not one of the ten supported
+  home-service trades: plumbing, HVAC, cleaning, landscaping,
+  electrical, pest control, painting, garage door, roofing, glass.
+- `dead_site` — Site returns a 200-OK HTTP response but content is a
+  parked or registrar placeholder (domain-for-sale landing page,
+  GoDaddy or Sedo parking page). Not the same as "site won't load",
+  which aborts before TRIAGE_META emission.
+
+### `disqualifiers` — detection notes
+
+Emit each enum string independently — the field is a list, and multiple
+disqualifiers can coexist (e.g., a non-US/Canada franchise would emit
+both `national_chain` and `out_of_service_area`). Default is empty list
+`[]`. Emit a value only when visible audit content supports it; when
+a disqualifier is ambiguous or signals are absent, leave it out of the
+list rather than guessing.
+
+#### `national_chain`
+
+Emit when any of the following are observed:
+
+- Franchise footer language: "independently owned and operated franchise
+  of [National Brand]", "a [Brand] franchise", or similar disclosure
+- Enterprise FSM (ServiceTitan multi-location, Housecall Pro with 10+
+  locations listed) combined with explicit multi-state or multi-city
+  service area
+- Site lists "3+ states/regions" as service area or describes itself as
+  "expanding nationally"
+
+Leave absent when the business is a single-location SMB, even if the
+business name sounds corporate. A franchise-style name alone is not
+sufficient — the franchise disclosure must be visible.
+
+#### `under_construction`
+
+Emit when the site loads (distinct from "site won't load", which
+aborts the audit entirely) but contains only placeholder content.
+Two or more of the following signals qualify:
+
+- "Coming Soon", "Under Construction", "Site Launching Soon", or
+  "Check Back Later" banner or hero text
+- Default CMS taglines ("Just another WordPress site", "My Site" as
+  the page title, Wix/Squarespace default hero copy)
+- Lorem ipsum text anywhere in visible content
+- No services listed, no contact info, and no business name in the
+  visible HTML beyond the domain
+- Registrar/parking signals: "This domain is for sale",
+  "GoDaddy parking page", "Sedo parking" in page text or meta
+- Copyright year is the current year with no other history and no
+  real content (likely newly registered, not yet built)
+
+Leave absent when the site has real content, even if the content is
+amateur-quality or outdated. "Bad website" is not "placeholder site."
+
+#### `out_of_service_area`
+
+Semantic: **not US/Canada**. This is a binary check against the
+country-level target market. It is narrower than "outside our
+primary market" — a US-based prospect in a state we rarely pitch to
+is NOT `out_of_service_area`.
+
+Emit only when ALL of the following are true:
+
+- The audit extracted both a clear city AND a clear
+  province/state
+- The city + province/state pair unambiguously places the business
+  outside US/Canada (e.g., Manchester, UK; Mumbai, India; Sydney,
+  NSW, Australia)
+- No countervailing signal on the site suggests a US/Canada branch
+  or service area
+
+Leave absent when:
+
+- Either city or province/state is missing or ambiguous in the
+  audit's extraction
+- The visible location is unambiguously in US/Canada
+- Signals are mixed (head-office-elsewhere case — see below)
+
+**Head-office edge case.** A national franchise whose head office is
+in US/Canada but whose audited page serves an outside-region branch
+does NOT emit `out_of_service_area` — emit `national_chain` instead,
+which is the more informative signal for downstream routing. Symmetric
+case: a non-US/Canada HQ with a US/Canada branch page emits neither
+disqualifier if the audited page is genuinely in-market; these are
+`national_chain` candidates regardless of HQ location.
+
+**Forward-compat hook for resolved-address data.** If a future pipeline
+change surfaces a resolved business address (e.g., from Google Places
+`formattedAddress`), prefer that address for the OOSA judgment over
+visible page content. Until then, the rule above uses the audit's
+city + province/state extraction only.
+
+#### `wrong_trade`
+
+Emit when the audit's trade identification places the business
+outside the home-service trades supported by this skill: plumbing,
+HVAC, cleaning, landscaping, electrical, pest control, painting,
+garage door, roofing, glass.
+
+Leave absent when the trade is in scope, OR when the trade cannot be
+confidently determined from the site (emit no disqualifier and note
+the ambiguity in Talking Points rather than guessing).
+
+#### `dead_site`
+
+Emit when the site LOADS (returns a 200-OK HTTP response) but the
+content is clearly a parked/registrar placeholder rather than an
+actual business site. Signals: "This domain is for sale", "GoDaddy
+parking page", "Sedo parking", Afternic listings, or a registrar
+default landing page with no business-specific content at all.
+
+Do NOT emit for sites that simply fail to load — those trigger the
+site-won't-load hard abort (the audit aborts before TRIAGE_META is written)
+and do not produce a TRIAGE_META block at all. Do NOT emit for degraded-but-real sites
+(broken images, slow loading, missing pages) — those get audited
+normally.
+
+Leave absent when the site loads with any genuine business content,
+even if the content is minimal.
 
 ### Example
 

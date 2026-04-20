@@ -78,6 +78,10 @@ disqualifiers: []
 Real audit run, not predicted. The `audit_generated_at` timestamp in
 the source file is `2026-04-17T02:43:37Z`.
 
+2026-04-20 Phase F smoke-test re-run matched the 2026-04-17 baseline
+byte-for-byte across all 6 diffable fields. The 2026-04-17 audit
+remains the canonical source.
+
 ## Fixture 2 — National chain disqualifier (franchise corporate)
 
 **URL:** `https://www.mrrooter.com/`
@@ -119,11 +123,12 @@ disqualifiers:
 
 ### Source
 
-Predicted from rules, not from a saved audit. See the "Known gap"
-section below regarding the `null` values on the applicability flags
-when a disqualifier fires — this prediction follows the literal rule
-text in SKILL.md. Actual audit runtime behavior may differ; the smoke
-test resolves.
+Originally predicted from SKILL.md grounding rules; confirmed against
+`output/mrrooter-2026-04-20.md`, which emitted a `triage-meta` block
+matching the expected values above byte-for-byte across all 6 diffable
+fields. The literal SKILL.md reading — `null` on applicability flags
+when a disqualifier fires — is what the producer actually emits. See
+the "Known gap" section below for the resolution record.
 
 ## Fixture 3 — Out-of-service-area disqualifier (UK)
 
@@ -162,8 +167,11 @@ disqualifiers:
 
 ### Source
 
-Predicted from rules, not from a saved audit. Same caveat as Fixture
-2 regarding `null` applicability flags.
+Originally predicted from SKILL.md grounding rules; confirmed against
+`output/warmandcoollondon-2026-04-20.md`, which emitted a `triage-meta`
+block matching the expected values above byte-for-byte across all 6
+diffable fields. Same resolution as Fixture 2 on the `null`
+applicability flags; see the "Known gap" section below.
 
 ## Deferred — Tier 3 FSM counter-signal
 
@@ -194,6 +202,8 @@ GHL-specific signals independent of the FSM.
 
 ## Known gap — disqualifier short-circuit behavior
 
+### Historical context (pre-2026-04-20)
+
 SKILL.md's `mctb_applicable` and `vaai_applicable` grounding rules
 define true/false/null emission solely from visible site signals.
 Neither section references disqualifiers, and the disqualifiers
@@ -206,23 +216,45 @@ applicability flags. However, ghl-triage's runtime pipeline
 (`prospect_triage.py`) enforces a precedence order — the Fix 8
 disqualifier gate at Step 3.4 runs before the Fix 7 applicability
 gate at Step 3.5 — so at the consumer side, disqualified prospects
-never reach applicability evaluation at all. If the audit producer
-mirrors this behavior (short-circuiting at the triage-meta emission
-step), actual audit runs against Mr. Rooter and Warm & Cool London
-may emit `false` rather than `null` on the applicability flags.
+never reach applicability evaluation at all. Before the Phase F smoke
+test, it was unclear whether the audit producer would mirror this
+short-circuit or follow the literal SKILL.md reading.
 
-This is a documentation gap in SKILL.md, not a fixture bug. The Phase
-F smoke test is the resolution point:
+### Resolution (2026-04-20 Phase F smoke test)
 
-- If actual runs emit `null`, the fixtures are correct and SKILL.md's
-  literal reading is what the pipeline implements.
-- If actual runs emit `false`, either the fixtures need updating to
-  match, or SKILL.md needs a new rule statement making the
-  short-circuit explicit — the Phase F smoke-test follow-up session
-  decides which, and the outcome is recorded back into SKILL.md
-  and/or this file.
+The producer emits `null` on `mctb_applicable` and `vaai_applicable`
+when a disqualifier fires — matching the literal SKILL.md reading,
+not the consumer-side short-circuit. Confirmed against real audit
+runs `output/mrrooter-2026-04-20.md` (national_chain) and
+`output/warmandcoollondon-2026-04-20.md` (out_of_service_area); both
+emitted `null` on the applicability flags as the fixtures predicted.
+
+The consumer-side Fix 8 short-circuit in `prospect_triage.py` is
+separate and unchanged: the audit-mode disqualifier gate fires before
+the applicability gate, so the `null` values are never evaluated at
+the consumer. Producer and consumer have distinct, compatible
+responsibilities — the producer reports each field honestly per its
+own rule; the consumer routes on disqualifier precedence.
+
+### Cross-side contract point
+
+This two-side split — producer emits per-field honestly, consumer
+short-circuits on disqualifier precedence — should be preserved
+through any future pipeline changes. Collapsing them (e.g., teaching
+the producer to emit `false` on applicability flags when a
+disqualifier fires) would make the audit less honest and would break
+the fixture predictions here. Flag in any proposal that touches
+either the TRIAGE_META emission rules or the ghl-triage audit-mode
+gate ordering.
 
 ## Smoke test procedure
+
+**Last run:** 2026-04-20. Producer-side outcome: all three fixtures
+passed (Fixture 1 re-run matched 2026-04-17 baseline byte-for-byte;
+Fixtures 2 and 3 confirmed against newly-saved audit outputs
+`output/mrrooter-2026-04-20.md` and
+`output/warmandcoollondon-2026-04-20.md`). Steps 4–5 (consumer-side
+ghl-triage handoff) deferred to a follow-up session.
 
 Manual verification loop, adapted from `HANDOFF_phase_F.md` with the
 Phase E correction to the ghl-triage entry point:

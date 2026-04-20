@@ -50,6 +50,14 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+# Force UTF-8 on stdout/stderr — Windows defaults to cp1252 which crashes on ✅/❌ glyphs.
+if hasattr(sys.stdout, "reconfigure"):
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------

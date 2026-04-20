@@ -249,12 +249,29 @@ gate ordering.
 
 ## Smoke test procedure
 
-**Last run:** 2026-04-20. Producer-side outcome: all three fixtures
-passed (Fixture 1 re-run matched 2026-04-17 baseline byte-for-byte;
-Fixtures 2 and 3 confirmed against newly-saved audit outputs
+**Last run:** 2026-04-20.
+
+Producer-side outcome: all three fixtures passed (Fixture 1 re-run
+matched 2026-04-17 baseline byte-for-byte across all 6 diffable
+fields; Fixtures 2 and 3 confirmed against newly-saved audit outputs
 `output/mrrooter-2026-04-20.md` and
-`output/warmandcoollondon-2026-04-20.md`). Steps 4–5 (consumer-side
-ghl-triage handoff) deferred to a follow-up session.
+`output/warmandcoollondon-2026-04-20.md`).
+
+Consumer-side outcome: all three fixtures passed end-to-end via
+`execution/triage_handoff.py --audit`. Fixture 1 routed normally
+(MCTB/VAAI Tier 1 at score 89, GRM skip on knockout gate, WEB skip
+on score below T2). Fixtures 2 and 3 hit the Fix 8 audit-disqualifier
+gate on all four services, emitting
+`classification_reason=disqualified_per_audit` with the disqualifier
+code carried through the `notes` field (`national_chain` and
+`out_of_service_area` respectively). Validated against ghl-triage at
+commit `e190452` (fix 14 step 1: audit_parser.py YAML block-list
+support — prerequisite fix identified and patched during this Phase
+F closure).
+
+Session-bundled fix: wrapper cp1252 stdout encoding in
+`execution/triage_handoff.py` patched in-situ; previously worked
+around with `PYTHONIOENCODING=utf-8` env var.
 
 Manual verification loop, adapted from `HANDOFF_phase_F.md` with the
 Phase E correction to the ghl-triage entry point:
@@ -266,11 +283,16 @@ Phase E correction to the ghl-triage entry point:
 3. Diff the `triage-meta` block against this file's Expected values
    block for that fixture. Ignore `audit_generated_at`,
    `business_name`, and `business_url` — those are run-specific.
-4. Run the ghl-triage audit-mode handoff:
-   `python prospect_triage.py --audit output/<saved-file>.md`
-   (verify the exact invocation before running; the handoff flagged
-   this as the expected command but recommended confirming against
-   current ghl-triage behavior)
+4. Run the ghl-triage audit-mode handoff. Primary path (matches
+   the post-audit step wired into CLAUDE.md and used by Phase F):
+   `python execution/triage_handoff.py --audit output/<saved-file>.md`
+   Fallback (direct ghl-triage invocation, useful for isolating
+   Fix 7 / Fix 8 gate behavior if the wrapper path diverges):
+   `python ../ghl-triage/prospect_triage.py --service ALL --from-audit output/<saved-file>.md`
+   The wrapper translates `--audit` to `--from-audit` internally;
+   on the direct path the flag is `--from-audit` and `--service` is
+   required. Both invocations assume cwd is the website-sales-audit
+   project root. Use `python` (not `python3`) on Windows.
 5. Confirm the Fix 7 / Fix 8 skip logic activates or doesn't activate
    as expected per fixture profile (baseline should be processed;
    franchise and overseas should be skipped at the disqualifier gate).

@@ -216,7 +216,7 @@ variables with real business data from structured_input.json:
 ### Overview
 Two API calls per prospect. Takes ~30–60 seconds. Outputs one JSON file.
 
-### execution/extract_business_data.py
+### extract_business_data.py (in ../website-audit-builder/execution/)
 
 **Input:** Website URL and/or business name + city (command line args)
 **Output:** output/structured_input.json (all 13 prompt variables + raw debug data)
@@ -812,8 +812,7 @@ website-sales-audit/
 ├── docs/archive/
 │   └── BOLT_PLUMBING_TEMPLATE_deprecated.md  ← archived; not loaded by any script
 │
-├── execution/
-│   ├── extract_business_data.py       ← Firecrawl + SerpApi extraction (~380 lines) ✅
+├── execution/  (extraction script lives in ../website-audit-builder — see README.md)
 │   ├── generate_website.py            ← Prompt assembler + orchestrator (~450 lines) ✅
 │   │
 │   │   NOTE: The 4 scripts below exist on the owner's local machine from a prior

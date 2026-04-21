@@ -48,8 +48,7 @@ website-sales-audit\
 │       ├── cleaning.md                    ← cleaning niche rules ✅
 │       └── roofing.md                     ← roofing niche rules ✅
 │
-├── execution\
-│   ├── extract_business_data.py           ← Firecrawl + SerpApi extraction ✅
+├── execution\  (extraction script lives in ../website-audit-builder — see README.md)
 │   ├── generate_website.py                ← prompt package assembler ✅
 │   ├── lead_pipeline.py                   ← lead generation pipeline ✅
 │   ├── email_verifier.py                  ← email verification ✅
@@ -114,7 +113,7 @@ pip install requests python-dotenv
 Test that the extraction script can find your keys:
 
 ```bash
-python3 execution/extract_business_data.py --help
+python3 ../website-audit-builder/execution/extract_business_data.py --help
 ```
 
 You should see the usage instructions, no errors.
@@ -152,7 +151,7 @@ Sells websites + GHL automation systems to plumbers, HVAC, cleaners, etc.
 ## Key Commands
 - Audit a site: "audit https://[url] and prepare full call prep"
 - Generate prompt package: python3 execution/generate_website.py --url https://[url] --mode bolt
-- Run extraction only: python3 execution/extract_business_data.py --url https://[url]
+- Run extraction only: python3 ../website-audit-builder/execution/extract_business_data.py --url https://[url]
 
 ## Key Files
 - docs/SKILL.md — website audit skill (v9)
@@ -160,7 +159,7 @@ Sells websites + GHL automation systems to plumbers, HVAC, cleaners, etc.
 - docs/master_prompts/universal_rules.txt — Layer 1 rules (every site)
 - docs/niches/plumbing.md — plumbing niche rules
 - docs/GHL_SETUP_CHECKLIST_v3.md — client onboarding procedure
-- execution/extract_business_data.py — Firecrawl + SerpApi data extraction
+- ../website-audit-builder/execution/extract_business_data.py — Firecrawl + SerpApi data extraction
 - execution/generate_website.py — prompt package assembler
 
 ## Skill Trigger
@@ -255,7 +254,7 @@ python3 execution/generate_website.py \
 **Option B — two commands (if you want to verify extracted data first):**
 ```bash
 # Step 1: Extract business data
-python3 execution/extract_business_data.py \
+python3 ../website-audit-builder/execution/extract_business_data.py \
   --url https://mississaugaplumbingservices.com \
   --business "Mississauga Plumbing Services" \
   --city "Mississauga ON"
@@ -698,7 +697,7 @@ The alert is a safeguard against unexpected SKU tier changes or batch script run
 "audit https://[url] and prepare full call prep"
 
 # Extract business data only
-python3 execution/extract_business_data.py --url https://[url] --business "Name" --city "City ST"
+python3 ../website-audit-builder/execution/extract_business_data.py --url https://[url] --business "Name" --city "City ST"
 
 # Generate Bolt.new demo prompt
 python3 execution/generate_website.py --url https://[url] --mode bolt
@@ -735,7 +734,7 @@ netlify deploy --dir=dist --prod
 - [ ] Run `npm install -g netlify-cli` and `netlify login`
 - [ ] Verify CLAUDE.md project config
 - [ ] Create `output/prompt_packages/` folder
-- [ ] Test extraction: `python3 execution/extract_business_data.py --url https://mississaugaplumbingservices.com --business "Mississauga Plumbing Services" --city "Mississauga ON"`
+- [ ] Test extraction: `python3 ../website-audit-builder/execution/extract_business_data.py --url https://mississaugaplumbingservices.com --business "Mississauga Plumbing Services" --city "Mississauga ON"`
 - [ ] Confirm structured_input.json was created in output/
 - [ ] Test prompt generation: `python3 execution/generate_website.py --input output/structured_input.json --mode bolt`
 - [ ] Confirm prompt file appears in output/prompt_packages/

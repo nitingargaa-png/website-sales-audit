@@ -402,7 +402,7 @@ descriptions to supplement Firecrawl data.
 ## Firecrawl Skills — Installed in .agents/skills/
 
 These skills give Claude Code granular control over how prospect sites are scraped.
-They complement `execution/extract_business_data.py` and activate automatically.
+They complement `../website-audit-builder/execution/extract_business_data.py` and activate automatically.
 
 ### firecrawl (firecrawl/cli)
 **When to invoke:** Automatically during any data extraction task.
@@ -552,7 +552,6 @@ management, and structured execution using markdown files as state.
 - `docs/niches/_NICHE_TEMPLATE.md` — blank template for new niches
 
 ### Execution Scripts
-- `execution/extract_business_data.py` — Firecrawl + SerpApi data extraction
 - `execution/generate_website.py` — prompt package assembler (orchestrator)
 - `execution/triage_handoff.py` — post-audit GHL triage handoff (auto + manual)
 

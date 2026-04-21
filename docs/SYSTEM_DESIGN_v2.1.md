@@ -261,7 +261,7 @@ rotate it immediately at the provider dashboard. Do not wait.
 
 ### Script Locations
 ```
-execution/extract_business_data.py   ← Firecrawl + SerpApi extraction
+../website-audit-builder/execution/extract_business_data.py   ← Firecrawl + SerpApi extraction
 execution/generate_website.py        ← orchestrator: reads JSON, assembles prompt package
 ```
 
@@ -543,8 +543,7 @@ docs/
 output/
   mississaugaplumbingservices-2026-03-08.md  ← first audit report
 
-execution/
-  extract_business_data.py           ← Firecrawl + SerpApi extraction ✅
+execution/  (extraction script lives in ../website-audit-builder — see README.md)
   generate_website.py                ← orchestrator (corrected architecture) ✅
   lead_pipeline.py                   ← lead generation pipeline
   email_verifier.py                  ← email verification

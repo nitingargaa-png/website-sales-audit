@@ -9,7 +9,7 @@ This script does NOT invoke Claude Code directly. Python cannot subprocess Claud
 
 Correct workflow:
   DEMO — Claude Code (before client signs):
-    1. python3 execution/extract_business_data.py --url https://... → output/structured_input.json
+    1. python3 ../website-audit-builder/execution/extract_business_data.py --url https://... → output/structured_input.json
     2. python3 execution/generate_website.py --input output/structured_input.json --mode claude-code
     3. Open output/prompt_packages/[business]_claude-code_prompt.txt
     4. Open VS Code → new empty folder → copy WEBSITE_CLAUDE.md into it as CLAUDE.md
@@ -19,14 +19,14 @@ Correct workflow:
     8. Send URL in cold outreach
 
   DEMO — Bolt (alternative, no VS Code needed):
-    1. python3 execution/extract_business_data.py --url https://...
+    1. python3 ../website-audit-builder/execution/extract_business_data.py --url https://...
     2. python3 execution/generate_website.py --input output/structured_input.json --mode bolt
     3. Open output/prompt_packages/[business]_bolt_prompt.txt
     4. Paste into Bolt.new chatbox → attach logo + photos → build
     5. Deploy: bolt.host or netlify deploy --dir=dist --prod
 
   PRODUCTION (after client signs):
-    1. python3 execution/extract_business_data.py --url https://...
+    1. python3 ../website-audit-builder/execution/extract_business_data.py --url https://...
     2. python3 execution/generate_website.py --input output/structured_input.json --mode skill-output
     3. Open Claude Code in VS Code
     4. Run: "execute WEBSITE_GENERATION_SKILL.md using [package].json"
@@ -80,7 +80,7 @@ def run_extraction(url: str, niche_override: str = "") -> Path:
 def load_structured_input(input_path: Path) -> dict:
     if not input_path.exists():
         print(f"❌ File not found: {input_path}")
-        print("   Run: python3 execution/extract_business_data.py --url https://...")
+        print("   Run: python3 ../website-audit-builder/execution/extract_business_data.py --url https://...")
         sys.exit(1)
     with open(input_path, encoding="utf-8") as f:
         data = json.load(f)
@@ -149,7 +149,7 @@ def _validate_extraction(data: dict) -> None:
             print(f"   • {e}")
         print(
             "\n   Fix these in output/structured_input.json, then re-run.\n"
-            "   Or re-extract: python3 execution/extract_business_data.py --url https://..."
+            "   Or re-extract: python3 ../website-audit-builder/execution/extract_business_data.py --url https://..."
         )
         sys.exit(1)
 

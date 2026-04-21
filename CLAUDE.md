@@ -637,3 +637,145 @@ netlify deploy --dir=dist --prod
 ```
 `--dir=dist` is mandatory. Vite builds to dist/. Without it, Netlify deploys
 source files and the site breaks.
+-------------------------------------------------------------------------
+
+## Environment & Operator Notes
+
+Reference section for dev-environment and operator-workflow patterns
+that span multiple fixes and sessions. Patterns worth remembering
+between sessions live here.
+
+### Development environment
+
+- Windows 11 Home, PowerShell 5.x + git-bash via Claude Code.
+- Git config: `core.autocrlf=true` globally; `.gitattributes
+  * text=auto eol=lf` in each repo overrides it per-repo.
+- Git pager disabled globally (`core.pager ""`).
+- `python3` alias is broken on this box (Microsoft Store stub); use
+  `python` or `py`.
+- PowerShell `Set-Content -Encoding UTF8` silently writes a BOM; use
+  `[System.Text.UTF8Encoding]::new($false)` for BOM-free UTF-8 when
+  writing files from PowerShell. `Get-Content` without `-Encoding
+  UTF8` renders UTF-8 em-dashes as mojibake — pass the flag explicitly.
+
+### Three-site cp1252 pattern
+
+Modern Windows Python can crash on em-dashes and other non-cp1252
+characters when stdout is piped or running under certain subprocess
+contexts, even though interactive `sys.stdout.encoding` reports
+`utf-8`. Fix is a byte-identical 8-line stdout/stderr reconfigure
+block with a `hasattr` guard for Python <3.7 compatibility.
+
+- **This repo's site:** `execution/triage_handoff.py` (Fix 11,
+  `3e10e58`).
+- **See also** the sibling sites in the other two repos: `ghl-triage`
+  (`prospect_triage.py`) and `website-audit-builder`
+  (`execution/extract_business_data.py`). Same patch, different
+  consumer.
+
+**Verification patterns for pre-patch repro on a fresh box:**
+- PowerShell: `[Console]::OutputEncoding`
+- Either shell: `python -c "import sys; print(sys.stdout.encoding)"`
+
+Interactive stdout often reports `utf-8` on modern Windows Python
+regardless of `chcp` or `PYTHONIOENCODING`. Pre-patch repro can be
+hard to force on some operator boxes — fix still needed for fresh
+machines, CI, and subprocess pipes.
+
+### Commit body compose mechanism
+
+Use this 8-step sequence for any commit body containing quotes,
+em-dashes, Unicode, or other escape-fragile characters. Heredocs
+(`<<'EOF'`) are deprecated for this purpose — they have a recurring
+backslash-escape bug class that mechanisms, not guidelines, prevent.
+
+1. Apply edits (Update / str_replace — these do NOT auto-stage).
+2. Post-edit verification (AST, grep sweeps, `diff --stat`, parity hook).
+3. Write commit body to temp file via Write tool.
+4. Integrity checks on temp file: 8 content greps (section headers
+   unique, zero backslashes, expected line count) + 4 on-disk byte
+   checks (`head -1` for subject, first-byte hexdump for BOM, `file`
+   for CRLF, `sha256` for paper trail) + 2 anchor-specific greps
+   where applicable.
+5. `cat` print the body for operator eyeball.
+6. `git add <files>` — explicit; tool-based edits do not auto-stage.
+7. `git commit -F <temp-file>`.
+8. Post-commit verification (9 steps including grep-for-backslashes
+   on committed body via `git log -1 --format=%B`).
+
+**Case studies.** The file-based mechanism exists because two
+heredoc-based commit attempts shipped with backslash-quote escape
+sequences leaked into the committed body: orphan `34a36c1`
+(pre-amend fix 17) and orphan `68fbff2` (pre-amend fix 17b), both
+in `website-audit-builder`. Both were amended away; the orphans
+will be garbage-collected. A written guideline to use single-quoted
+heredocs with zero escapes existed after the first occurrence and
+still failed on the second. Mechanisms beat guidelines under
+execution pressure.
+
+**Write-tool echo display bug.** The Write tool's echo of file
+contents has cosmetic rendering issues (subject-line character wrap,
+line-number skips). On-disk bytes are correct. The four on-disk byte
+checks in step 4 above exist specifically to verify this — echo is
+not a reliable preview.
+
+**Temp file location.** Used
+`/c/Users/canad/AppData/Local/Temp/<fix>_body.txt` with git-bash.
+The `commit -F` pattern is cross-platform; the path literal isn't.
+
+### Diagram-tree edits — annotation vs EDIT
+
+When a filename reference sits inside an indented ASCII/Unicode
+directory tree, repointing to an absolute or relative sibling path
+produces structurally wrong diagrams (the sibling path visually
+appears to live inside the local folder). Correct pattern is to
+annotate the parent folder line instead. Example:
+
+```
+execution/  (extraction script lives in ../website-audit-builder — see README.md)
+```
+
+Locked as canonical after Fix 12's Edit 18 (`a02608f`, in this repo).
+Applies to any doc that contains indented directory-tree diagrams.
+
+### Fix 16 schema-drift guidance
+
+Multi-repo backlog entries must anchor every file reference to a
+specific repo+path. Do not carry file-name-only references across
+handoff boundaries — session-context bleed will silently relocate
+sites between repos. Fix 15's commit message referred to
+`extract_business_data.py` as "the third cp1252 site in this repo"
+(ghl-triage); the file actually lives in `website-audit-builder`.
+Handoff docs carried the claim forward until Fix 16's P2 discovery
+sweep caught it. Pattern: every file reference in a commit message,
+handoff, or backlog entry gets `<repo>/<relative-path>` explicitly.
+
+### Dict-keyed handoff log
+
+This repo is the producer side of the cross-repo prospect handoff.
+The canonical log is a URL-keyed dict written to disk by
+`execution/triage_handoff.py`. For schema and rationale, read the
+module itself — the shape is defined there and kept in sync with
+consumer code in `ghl-triage`. Pattern worth flagging: dict-keyed
+(not list-keyed) so same-URL re-handoffs overwrite in place rather
+than duplicate.
+
+Consumer side is `ghl-triage` via `--from-audit`. See
+`ghl-triage/CLAUDE.md` § "Environment & Operator Notes" for the
+consumer-side reference.
+
+### Synthetic-fixture-vs-real-producer coverage
+
+A passing test suite against synthetic fixtures does not prove the
+consumer handles real producer output. Fix 14 canonicalized this as
+a general lesson: synthetic fixtures test the code path the author
+imagined; real producer output exercises the code path real data
+takes. The five pre-Fix-14 synthetic fixtures all used inline-list
+YAML form (what a human hand-writes); the real producer emits
+block-list form (what PyYAML defaults to). A single real-producer
+fixture added during Fix 7 or Fix 8 would have caught the parser
+gap that Fix 14 fixed. When producing output consumed by
+`ghl-triage`, actively generate the canonical PyYAML shape rather
+than the human-readable one — consumer tolerance covers correctness,
+but matching the canonical shape avoids silent-mismatch surprises.
+

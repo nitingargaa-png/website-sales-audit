@@ -2,118 +2,391 @@
 """
 check_template_parity.py
 
-Verifies that files listed in <project_root>/.shared-templates are
-byte-identical across this project and a sibling project.
+Verifies that artifacts listed in manifests at <project_root> are
+identical across this project and a sibling project. Two manifests are
+supported, each with its own granularity and its own sibling:
 
-Why: Some files (e.g. skill templates, prompt templates) are
-intentionally duplicated across sibling projects to keep each
-project self-contained. Silent drift between copies is a real risk.
-This script catches drift at commit time via a pre-commit hook.
+    .shared-templates   whole-file byte-identity after CRLF normalization
+    .shared-functions   named Python functions extracted via AST,
+                        normalized (CRLF -> LF, then rstrip per line),
+                        then compared for strict equality
 
-Usage:
-    python tools/check_template_parity.py           # quiet on success
-    python tools/check_template_parity.py --verbose # prints OK summary
+Why: Some artifacts (e.g. WEBSITE_CLAUDE.md, or the small YAML-subset
+sub-parser shared between the triage and audit-builder parsers) are
+intentionally duplicated across sibling projects so each project is
+self-contained. Silent drift between copies is a real risk. This
+script catches drift at commit time via a pre-commit hook.
 
-Sibling project:
-    Defaults to '../website-audit-builder' relative to project root.
-    Override with env var SIBLING_PROJECT_NAME to use a different
-    sibling folder name (same parent directory).
+.shared-templates format:
+    One path per line, relative to project root.
+    Blank lines and # comments ignored.
+    A manifest-level sibling directive on its own line, before the
+    first entry, pins the sibling for this manifest:
+        # sibling: <name-or-path>
+    Env var SHARED_TEMPLATE_SIBLING overrides if directive absent.
+    If both are absent, exit code 2 (infrastructure problem).
+
+.shared-functions format:
+    One entry per line. Blank lines and # comments ignored.
+    A manifest-level sibling directive on its own line, before the
+    first entry, pins the sibling for this manifest:
+        # sibling: <name-or-path>
+    A bare name resolves as a sibling folder (../<name>). A path with
+    a separator resolves relative to project root. Absolute paths are
+    used as-is. Env var SHARED_FUNCTION_SIBLING overrides if directive
+    absent. If both are absent, exit code 2 (infrastructure problem).
+
+    Each entry is a function-location pair:
+        <local/path.py>::<fn>   [<=> <remote/path.py>::<fn>]
+    The right side is optional; when absent the local side is used on
+    both ends (function name and path identical across repos).
 
 Exit codes:
-    0 - all listed files match, or sibling project absent (non-fatal)
-    1 - at least one file differs, is missing, or manifest is malformed
+    0 - all listed artifacts match
+    1 - at least one artifact differs, one "MISMATCH: <what>" line each
+    2 - sibling project not found, or manifest malformed
 """
 
+import ast
 import hashlib
 import os
 import sys
 from pathlib import Path
 
-DEFAULT_SIBLING_NAME = "website-audit-builder"
-MANIFEST_FILENAME = ".shared-templates"
+TEMPLATES_MANIFEST = ".shared-templates"
+FUNCTIONS_MANIFEST = ".shared-functions"
+SIBLING_DIRECTIVE = "# sibling:"
+PAIR_SEP = "<=>"
+FN_SEP = "::"
 
 
-def sha256(path: Path) -> str:
-    """SHA256 of file contents with CRLF normalized to LF.
+def resolve_sibling(project_root, name_or_path):
+    """Resolve a sibling path.
+
+    `name_or_path` must be non-None and can be:
+        - a bare name (no path separators): sibling folder under
+          project_root.parent (most common case: directive like
+          '# sibling: ghl-triage')
+        - a relative path (contains '/' or '\\'): resolved relative to
+          project_root (escape hatch for non-sibling layouts)
+        - an absolute path: used as-is
+    """
+    p = Path(name_or_path)
+    if p.is_absolute():
+        return p.resolve()
+    # No path separator -> treat as sibling folder name
+    if "/" not in name_or_path and "\\" not in name_or_path:
+        return (project_root.parent / name_or_path).resolve()
+    return (project_root / name_or_path).resolve()
+
+
+def sha256_normalized_bytes(data_bytes):
+    """SHA256 of bytes with CRLF normalized to LF.
 
     core.autocrlf=true on Windows causes checked-out files to have CRLF
     while sibling working trees may have LF. Normalizing before hashing
     ensures we only detect real content drift, not line-ending drift.
     """
-    data = path.read_bytes().replace(b"\r\n", b"\n")
-    return hashlib.sha256(data).hexdigest()
+    return hashlib.sha256(data_bytes.replace(b"\r\n", b"\n")).hexdigest()
 
 
-def read_manifest(manifest_path: Path) -> list[str]:
-    if not manifest_path.is_file():
-        print(f"ERROR: manifest not found at {manifest_path}", file=sys.stderr)
-        sys.exit(1)
+def sha256_normalized_file(path):
+    return sha256_normalized_bytes(path.read_bytes())
+
+
+def normalize_text(s):
+    """Normalize extracted source text: CRLF -> LF, then strip trailing
+    whitespace on each line. Matches what any sane editor/formatter does
+    on save, so invisible whitespace drift never triggers a mismatch."""
+    s = s.replace("\r\n", "\n")
+    return "\n".join(line.rstrip() for line in s.split("\n"))
+
+
+def read_simple_manifest(manifest_path):
+    """Read .shared-templates: returns (sibling_directive, entries).
+
+    sibling_directive is the value of the first '# sibling: <name>'
+    comment, or None if absent. entries is a list of paths relative
+    to project root.
+    """
+    sibling_directive = None
     entries = []
     for raw in manifest_path.read_text(encoding="utf-8").splitlines():
         line = raw.strip()
-        if not line or line.startswith("#"):
+        if not line:
+            continue
+        if line.lower().startswith(SIBLING_DIRECTIVE):
+            # first directive wins; later ones ignored silently
+            if sibling_directive is None:
+                sibling_directive = line[len(SIBLING_DIRECTIVE):].strip()
+            continue
+        if line.startswith("#"):
             continue
         entries.append(line)
-    return entries
+    return sibling_directive, entries
 
 
-def main() -> int:
-    verbose = "--verbose" in sys.argv
+def read_functions_manifest(manifest_path):
+    """Read .shared-functions: returns (sibling_directive, entries).
 
-    project_root = Path(__file__).resolve().parent.parent
-    sibling_name = os.environ.get("SIBLING_PROJECT_NAME", DEFAULT_SIBLING_NAME)
-    sibling_root = project_root.parent / sibling_name
+    sibling_directive is the value of the first '# sibling: <name>'
+    comment, or None if absent. entries is a list of
+    (local_path, local_fn, remote_path, remote_fn) tuples.
+    """
+    sibling_directive = None
+    entries = []
+    for raw in manifest_path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if not line:
+            continue
+        if line.lower().startswith(SIBLING_DIRECTIVE):
+            # first directive wins; later ones ignored silently
+            if sibling_directive is None:
+                sibling_directive = line[len(SIBLING_DIRECTIVE):].strip()
+            continue
+        if line.startswith("#"):
+            continue
+        # parse <local>::<fn> [<=> <remote>::<fn>]
+        if PAIR_SEP in line:
+            left, right = [s.strip() for s in line.split(PAIR_SEP, 1)]
+        else:
+            left, right = line, line
+        if FN_SEP not in left or FN_SEP not in right:
+            print(
+                "ERROR: malformed .shared-functions entry (need '{}'): {!r}".format(
+                    FN_SEP, line
+                ),
+                file=sys.stderr,
+            )
+            return None, None
+        local_path, local_fn = [s.strip() for s in left.split(FN_SEP, 1)]
+        remote_path, remote_fn = [s.strip() for s in right.split(FN_SEP, 1)]
+        if not (local_path and local_fn and remote_path and remote_fn):
+            print(
+                "ERROR: malformed .shared-functions entry (empty part): {!r}".format(
+                    line
+                ),
+                file=sys.stderr,
+            )
+            return None, None
+        entries.append((local_path, local_fn, remote_path, remote_fn))
+    return sibling_directive, entries
 
-    if not sibling_root.is_dir():
+
+def extract_function_source(py_path, fn_name):
+    """Return normalized source of the top-level function `fn_name` in
+    `py_path`, or None if the file can't be read, can't be parsed, or
+    the function isn't a top-level def. Prints a specific error and
+    returns None; caller treats None as a mismatch."""
+    try:
+        src = py_path.read_text(encoding="utf-8")
+    except OSError as exc:
         print(
-            f"WARN: sibling project '{sibling_name}' not found at {sibling_root}. "
-            f"Skipping template-parity check.",
+            "ERROR: cannot read {}: {}".format(py_path, exc), file=sys.stderr
+        )
+        return None
+    try:
+        tree = ast.parse(src, filename=str(py_path))
+    except SyntaxError as exc:
+        print(
+            "ERROR: cannot AST-parse {}: {}".format(py_path, exc),
             file=sys.stderr,
         )
-        return 0
+        return None
+    for node in tree.body:
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name == fn_name:
+                segment = ast.get_source_segment(src, node)
+                if segment is None:
+                    print(
+                        "ERROR: could not extract source for {}::{}".format(
+                            py_path, fn_name
+                        ),
+                        file=sys.stderr,
+                    )
+                    return None
+                return normalize_text(segment)
+    print(
+        "ERROR: function '{}' not found at top level of {}".format(
+            fn_name, py_path
+        ),
+        file=sys.stderr,
+    )
+    return None
 
-    manifest = project_root / MANIFEST_FILENAME
-    entries = read_manifest(manifest)
 
-    if not entries:
-        if verbose:
-            print("OK: manifest empty, nothing to check.")
-        return 0
-
+def check_templates(project_root):
+    """Run .shared-templates checks. Returns (ran, mismatches, sibling_root)."""
+    manifest = project_root / TEMPLATES_MANIFEST
+    if not manifest.is_file():
+        return False, [], None
+    directive, entries = read_simple_manifest(manifest)
+    # sibling resolution: manifest directive > env > error
+    env_override = os.environ.get("SHARED_TEMPLATE_SIBLING")
+    sibling_name_or_path = directive or env_override
+    if sibling_name_or_path is None:
+        print(
+            "ERROR: no sibling configured for {}".format(TEMPLATES_MANIFEST),
+            file=sys.stderr,
+        )
+        print(
+            "  set the '# sibling: <name>' directive in {} or "
+            "SHARED_TEMPLATE_SIBLING env var.".format(TEMPLATES_MANIFEST),
+            file=sys.stderr,
+        )
+        return True, ["__sibling_missing__"], None
+    sibling_root = resolve_sibling(
+        project_root, sibling_name_or_path
+    )
+    if not sibling_root.is_dir():
+        print(
+            "ERROR: sibling project not found at {} (for {})".format(
+                sibling_root, TEMPLATES_MANIFEST
+            ),
+            file=sys.stderr,
+        )
+        print(
+            "  set the '# sibling: <name>' directive in {} or "
+            "SHARED_TEMPLATE_SIBLING env var.".format(TEMPLATES_MANIFEST),
+            file=sys.stderr,
+        )
+        return True, ["__sibling_missing__"], sibling_root
     mismatches = []
     for rel in entries:
         local = project_root / rel
         remote = sibling_root / rel
         if not local.is_file():
-            print(f"ERROR: missing locally: {local}", file=sys.stderr)
-            mismatches.append(rel)
-            continue
-        if not remote.is_file():
-            print(f"ERROR: missing in sibling: {remote}", file=sys.stderr)
-            mismatches.append(rel)
-            continue
-        local_hash = sha256(local)
-        remote_hash = sha256(remote)
-        if local_hash != remote_hash:
-            print(f"DRIFT: {rel}", file=sys.stderr)
-            print(f"  local  ({local}): {local_hash}", file=sys.stderr)
-            print(f"  remote ({remote}): {remote_hash}", file=sys.stderr)
             print(
-                f"  sync with: cp '{remote}' '{local}'   (or the other way)",
+                "MISMATCH: {} (missing locally: {})".format(rel, local),
                 file=sys.stderr,
             )
             mismatches.append(rel)
-
-    if mismatches:
+            continue
+        if not remote.is_file():
+            print(
+                "MISMATCH: {} (missing in sibling: {})".format(rel, remote),
+                file=sys.stderr,
+            )
+            mismatches.append(rel)
+            continue
+        if sha256_normalized_file(local) != sha256_normalized_file(remote):
+            print("MISMATCH: {}".format(rel), file=sys.stderr)
+            mismatches.append(rel)
+    if not mismatches:
         print(
-            f"\n{len(mismatches)} file(s) out of sync with sibling '{sibling_name}'. "
-            f"Resolve before committing (or bypass with: git commit --no-verify).",
+            "OK: {} template(s) in sync with {}".format(
+                len(entries), sibling_root
+            )
+        )
+    return True, mismatches, sibling_root
+
+
+def check_functions(project_root):
+    """Run .shared-functions checks. Returns (ran, mismatches, sibling_root)."""
+    manifest = project_root / FUNCTIONS_MANIFEST
+    if not manifest.is_file():
+        return False, [], None
+    directive, entries = read_functions_manifest(manifest)
+    if entries is None:
+        # malformed manifest; read_functions_manifest already printed
+        return True, ["__manifest_malformed__"], None
+    # sibling resolution: manifest directive > env > error
+    env_override = os.environ.get("SHARED_FUNCTION_SIBLING")
+    sibling_name_or_path = directive or env_override
+    if sibling_name_or_path is None:
+        print(
+            "ERROR: no sibling configured for {}".format(FUNCTIONS_MANIFEST),
             file=sys.stderr,
         )
-        return 1
+        print(
+            "  set the '# sibling: <name>' directive in {} or "
+            "SHARED_FUNCTION_SIBLING env var.".format(FUNCTIONS_MANIFEST),
+            file=sys.stderr,
+        )
+        return True, ["__sibling_missing__"], None
+    sibling_root = resolve_sibling(
+        project_root, sibling_name_or_path
+    )
+    if not sibling_root.is_dir():
+        print(
+            "ERROR: sibling project not found at {} (for {})".format(
+                sibling_root, FUNCTIONS_MANIFEST
+            ),
+            file=sys.stderr,
+        )
+        print(
+            "  set the '# sibling: <name>' directive in {} or "
+            "SHARED_FUNCTION_SIBLING env var.".format(FUNCTIONS_MANIFEST),
+            file=sys.stderr,
+        )
+        return True, ["__sibling_missing__"], sibling_root
+    mismatches = []
+    for local_rel, local_fn, remote_rel, remote_fn in entries:
+        local_path = project_root / local_rel
+        remote_path = sibling_root / remote_rel
+        tag = "{}::{}".format(local_rel, local_fn)
+        if local_rel != remote_rel or local_fn != remote_fn:
+            tag = "{}::{} <=> {}::{}".format(
+                local_rel, local_fn, remote_rel, remote_fn
+            )
+        if not local_path.is_file():
+            print(
+                "MISMATCH: {} (local file missing: {})".format(
+                    tag, local_path
+                ),
+                file=sys.stderr,
+            )
+            mismatches.append(tag)
+            continue
+        if not remote_path.is_file():
+            print(
+                "MISMATCH: {} (remote file missing: {})".format(
+                    tag, remote_path
+                ),
+                file=sys.stderr,
+            )
+            mismatches.append(tag)
+            continue
+        local_src = extract_function_source(local_path, local_fn)
+        remote_src = extract_function_source(remote_path, remote_fn)
+        if local_src is None or remote_src is None:
+            # extractor already printed a specific error
+            mismatches.append(tag)
+            continue
+        if local_src != remote_src:
+            print("MISMATCH: {}".format(tag), file=sys.stderr)
+            mismatches.append(tag)
+    if not mismatches:
+        print(
+            "OK: {} function(s) in sync with {}".format(
+                len(entries), sibling_root
+            )
+        )
+    return True, mismatches, sibling_root
 
-    if verbose:
-        print(f"OK: {len(entries)} template(s) match sibling '{sibling_name}'.")
+
+def main():
+    project_root = Path(__file__).resolve().parent.parent
+
+    templates_ran, templates_mm, _ = check_templates(project_root)
+    functions_ran, functions_mm, _ = check_functions(project_root)
+
+    if not templates_ran and not functions_ran:
+        print(
+            "ERROR: no manifest found (looked for {} and {})".format(
+                TEMPLATES_MANIFEST, FUNCTIONS_MANIFEST
+            ),
+            file=sys.stderr,
+        )
+        return 2
+
+    # Sibling-missing surfaces as exit 2 (infrastructure problem),
+    # content mismatches surface as exit 1.
+    sentinel_mm = {"__sibling_missing__", "__manifest_malformed__"}
+    if any(m in sentinel_mm for m in templates_mm + functions_mm):
+        return 2
+    if templates_mm or functions_mm:
+        return 1
     return 0
 
 

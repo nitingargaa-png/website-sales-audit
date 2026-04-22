@@ -1,3 +1,4 @@
+# sibling: website-audit-builder
 # Files that must remain byte-identical across website-sales-audit and website-audit-builder.
 # Checked by tools/check_template_parity.py on every commit via the pre-commit hook.
 # Add new paths below, one per line, relative to project root.

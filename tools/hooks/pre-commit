@@ -2,4 +2,8 @@
 # Runs the template-parity check before every commit.
 # Bypass with: git commit --no-verify
 python tools/check_template_parity.py
-exit $?
+rc=$?
+if [ $rc -ne 0 ]; then
+  echo "hint: edit .shared-templates to adjust which files are checked for parity." >&2
+fi
+exit $rc

@@ -4,3 +4,4 @@
 # Add new paths below, one per line, relative to project root.
 
 docs/WEBSITE_CLAUDE.md
+tools/check_template_parity.py

@@ -6,4 +6,3 @@
 docs/WEBSITE_CLAUDE.md
 tools/check_template_parity.py
 tools/check_bom.py
-.shared-sections

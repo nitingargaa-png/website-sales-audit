@@ -718,6 +718,7 @@ block with a `hasattr` guard for Python <3.7 compatibility.
   (`execution/extract_business_data.py`). Same patch, different
   consumer.
 
+<!-- shared-section:cp1252-verification start -->
 **Verification patterns for pre-patch repro on a fresh box:**
 - PowerShell: `[Console]::OutputEncoding`
 - Either shell: `python -c "import sys; print(sys.stdout.encoding)"`
@@ -726,6 +727,7 @@ Interactive stdout often reports `utf-8` on modern Windows Python
 regardless of `chcp` or `PYTHONIOENCODING`. Pre-patch repro can be
 hard to force on some operator boxes — fix still needed for fresh
 machines, CI, and subprocess pipes.
+<!-- shared-section:cp1252-verification end -->
 
 ### Commit body compose mechanism
 
@@ -823,4 +825,3 @@ gap that Fix 14 fixed. When producing output consumed by
 `ghl-triage`, actively generate the canonical PyYAML shape rather
 than the human-readable one — consumer tolerance covers correctness,
 but matching the canonical shape avoids silent-mismatch surprises.
-

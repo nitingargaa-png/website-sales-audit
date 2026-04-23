@@ -20,6 +20,8 @@ script catches drift at commit time via a pre-commit hook.
 .shared-templates format:
     One path per line, relative to project root.
     Blank lines and # comments ignored.
+    File must be LF-only and have no UTF-8 BOM; manifests are
+    enforced byte-level to catch silent drift.
     A manifest-level sibling directive on its own line, before the
     first entry, pins the sibling for this manifest:
         # sibling: <name-or-path>
@@ -28,6 +30,8 @@ script catches drift at commit time via a pre-commit hook.
 
 .shared-functions format:
     One entry per line. Blank lines and # comments ignored.
+    File must be LF-only and have no UTF-8 BOM; manifests are
+    enforced byte-level to catch silent drift.
     A manifest-level sibling directive on its own line, before the
     first entry, pins the sibling for this manifest:
         # sibling: <name-or-path>
@@ -102,6 +106,39 @@ def normalize_text(s):
     return "\n".join(line.rstrip() for line in s.split("\n"))
 
 
+def validate_manifest_bytes(manifest_path):
+    """Validate manifest file is LF-only and has no UTF-8 BOM.
+
+    Manifests (.shared-templates, .shared-functions) declare what is
+    checked; they themselves are not byte-compared across repos, so
+    silent byte-level drift (e.g., `Add-Content` writing CRLF into an
+    otherwise-LF file) can go undetected. This validator enforces the
+    design-lock invariant: LF throughout, no BOM.
+
+    Returns True on pass. On fail, prints a specific ERROR to stderr
+    and returns False.
+    """
+    data = manifest_path.read_bytes()
+    if data[:3] == b"\xef\xbb\xbf":
+        print(
+            "ERROR: manifest {} starts with UTF-8 BOM (expected no BOM)".format(
+                manifest_path
+            ),
+            file=sys.stderr,
+        )
+        return False
+    cr_count = data.count(b"\r")
+    if cr_count > 0:
+        print(
+            "ERROR: manifest {} contains {} CR byte(s) (expected LF-only)".format(
+                manifest_path, cr_count
+            ),
+            file=sys.stderr,
+        )
+        return False
+    return True
+
+
 def read_simple_manifest(manifest_path):
     """Read .shared-templates: returns (sibling_directive, entries).
 
@@ -109,6 +146,8 @@ def read_simple_manifest(manifest_path):
     comment, or None if absent. entries is a list of paths relative
     to project root.
     """
+    if not validate_manifest_bytes(manifest_path):
+        return None, None
     sibling_directive = None
     entries = []
     for raw in manifest_path.read_text(encoding="utf-8").splitlines():
@@ -133,6 +172,8 @@ def read_functions_manifest(manifest_path):
     comment, or None if absent. entries is a list of
     (local_path, local_fn, remote_path, remote_fn) tuples.
     """
+    if not validate_manifest_bytes(manifest_path):
+        return None, None
     sibling_directive = None
     entries = []
     for raw in manifest_path.read_text(encoding="utf-8").splitlines():
@@ -221,6 +262,9 @@ def check_templates(project_root):
     if not manifest.is_file():
         return False, [], None
     directive, entries = read_simple_manifest(manifest)
+    if entries is None:
+        # malformed manifest; read_simple_manifest already printed
+        return True, ["__manifest_malformed__"], None
     # sibling resolution: manifest directive > env > error
     env_override = os.environ.get("SHARED_TEMPLATE_SIBLING")
     sibling_name_or_path = directive or env_override

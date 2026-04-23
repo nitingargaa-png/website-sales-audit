@@ -683,6 +683,10 @@ command is about to write or read bytes:
   (e.g., `certutil -hashfile X SHA256certutil -hashfile X SHA256`).
   Paste single commands one line at a time; verify the prompt
   returned between each.
+- When rewriting a text file from scratch rather than editing specific
+  lines, check for a pre-existing BOM before writing — stripping a BOM
+  is a real byte-level change. Flag it explicitly in the commit message
+  rather than letting it ride silently.
 
 ### Three-site cp1252 pattern
 

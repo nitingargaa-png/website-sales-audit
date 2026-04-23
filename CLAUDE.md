@@ -687,6 +687,21 @@ command is about to write or read bytes:
   lines, check for a pre-existing BOM before writing — stripping a BOM
   is a real byte-level change. Flag it explicitly in the commit message
   rather than letting it ride silently.
+- Bare `[System.IO.File]` method calls (e.g., `ReadAllBytes`,
+  `ReadAllText`) do not share PowerShell's current directory. On
+  Windows they resolve relative paths against the .NET process cwd,
+  often `C:\Windows\System32`, not the visible PS prompt. Before any
+  `[System.IO.File]` block, call
+  `[System.IO.Directory]::SetCurrentDirectory((Get-Location).Path)`
+  once to sync the two cwds, or pass absolute paths.
+- Git's default pager on Windows (`less` under MSYS) can in some
+  environments drop the shell into `/bin/sh` mid-session, causing
+  subsequent PowerShell commands to be reinterpreted as POSIX-shell
+  commands and leaving stray files with mangled UTF-8 names in the
+  working tree. Mitigation: set `$env:GIT_PAGER = "cat"` once per
+  session, or use `git --no-pager <subcommand>` for `log`, `diff`,
+  `show`, etc. Any git command that prints more than one screen of
+  output is a candidate.
 
 ### Three-site cp1252 pattern
 

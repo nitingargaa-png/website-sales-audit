@@ -731,6 +731,7 @@ machines, CI, and subprocess pipes.
 
 ### Commit body compose mechanism
 
+<!-- shared-section:commit-body-compose start -->
 Use this 8-step sequence for any commit body containing quotes,
 em-dashes, Unicode, or other escape-fragile characters. Heredocs
 (`<<'EOF'`) are deprecated for this purpose — they have a recurring
@@ -769,6 +770,7 @@ not a reliable preview.
 **Temp file location.** Used
 `/c/Users/canad/AppData/Local/Temp/<fix>_body.txt` with git-bash.
 The `commit -F` pattern is cross-platform; the path literal isn't.
+<!-- shared-section:commit-body-compose end -->
 
 ### Diagram-tree edits — annotation vs EDIT
 

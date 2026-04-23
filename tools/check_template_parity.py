@@ -11,6 +11,10 @@ supported, each with its own granularity and its own sibling:
                         normalized (CRLF -> LF, then rstrip per line),
                         then compared for strict equality
 
+Every file listed in either manifest also passes a trailing-newline
+hygiene check: exactly one LF at end of file (after CRLF
+normalization). Zero or two-plus trailing LFs fail with rc=1.
+
 Why: Some artifacts (e.g. WEBSITE_CLAUDE.md, or the small YAML-subset
 sub-parser shared between the triage and audit-builder parsers) are
 intentionally duplicated across sibling projects so each project is
@@ -47,7 +51,8 @@ script catches drift at commit time via a pre-commit hook.
 
 Exit codes:
     0 - all listed artifacts match
-    1 - at least one artifact differs, one "MISMATCH: <what>" line each
+    1 - at least one artifact differs or has an invalid trailing newline,
+        one "MISMATCH: <what>" line each
     2 - sibling project not found, or manifest malformed
 """
 
@@ -96,6 +101,22 @@ def sha256_normalized_bytes(data_bytes):
 
 def sha256_normalized_file(path):
     return sha256_normalized_bytes(path.read_bytes())
+
+
+def count_trailing_lf(path):
+    """Return count of trailing \\n bytes after CRLF normalization.
+
+    0 means no trailing newline (includes 0-byte files); 1 means
+    exactly one trailing newline (the pass case); >=2 means a trailing
+    blank line or worse. CRLF is normalized to LF first so
+    core.autocrlf=true checkouts are not flagged spuriously, matching
+    the hash helper above.
+    """
+    data = path.read_bytes().replace(b"\r\n", b"\n")
+    i = len(data)
+    while i > 0 and data[i - 1:i] == b"\n":
+        i -= 1
+    return len(data) - i
 
 
 def normalize_text(s):
@@ -316,6 +337,31 @@ def check_templates(project_root):
         if sha256_normalized_file(local) != sha256_normalized_file(remote):
             print("MISMATCH: {}".format(rel), file=sys.stderr)
             mismatches.append(rel)
+        # Trailing-newline hygiene: both sides checked independently.
+        # Append-guarded by `rel not in mismatches` so a byte-identity
+        # failure and a trailing-newline failure on the same entry
+        # stay as one list entry while still printing separate
+        # MISMATCH lines to stderr (operator sees both signals).
+        for side_path, side_label in ((local, "locally"), (remote, "in sibling")):
+            n = count_trailing_lf(side_path)
+            if n == 1:
+                continue
+            if n == 0:
+                print(
+                    "MISMATCH: {} (no trailing newline {}: {})".format(
+                        rel, side_label, side_path
+                    ),
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    "MISMATCH: {} ({} trailing newlines {}: {})".format(
+                        rel, n, side_label, side_path
+                    ),
+                    file=sys.stderr,
+                )
+            if rel not in mismatches:
+                mismatches.append(rel)
     if not mismatches:
         print(
             "OK: {} template(s) in sync with {}".format(
@@ -365,6 +411,7 @@ def check_functions(project_root):
         )
         return True, ["__sibling_missing__"], sibling_root
     mismatches = []
+    trailing_checked = set()
     for local_rel, local_fn, remote_rel, remote_fn in entries:
         local_path = project_root / local_rel
         remote_path = sibling_root / remote_rel
@@ -400,6 +447,39 @@ def check_functions(project_root):
         if local_src != remote_src:
             print("MISMATCH: {}".format(tag), file=sys.stderr)
             mismatches.append(tag)
+        # Trailing-newline hygiene on the file itself (not the function
+        # extract). Dedup by absolute path so a .py file with multiple
+        # shared-function entries is only checked once per side per
+        # run. Append-guarded so one file's trailing-newline failure
+        # produces one mismatches entry regardless of how many function
+        # entries reference it.
+        for side_rel, side_path, side_label in (
+            (local_rel, local_path, "locally"),
+            (remote_rel, remote_path, "in sibling"),
+        ):
+            key = str(side_path.resolve())
+            if key in trailing_checked:
+                continue
+            trailing_checked.add(key)
+            n = count_trailing_lf(side_path)
+            if n == 1:
+                continue
+            if n == 0:
+                print(
+                    "MISMATCH: {} (no trailing newline {}: {})".format(
+                        side_rel, side_label, side_path
+                    ),
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    "MISMATCH: {} ({} trailing newlines {}: {})".format(
+                        side_rel, n, side_label, side_path
+                    ),
+                    file=sys.stderr,
+                )
+            if side_rel not in mismatches:
+                mismatches.append(side_rel)
     if not mismatches:
         print(
             "OK: {} function(s) in sync with {}".format(

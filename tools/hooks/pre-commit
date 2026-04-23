@@ -1,9 +1,17 @@
 #!/bin/sh
-# Runs the parity check before every commit.
+# Runs parity check and BOM check before every commit.
 # Bypass with: git commit --no-verify
 python tools/check_template_parity.py
-rc=$?
-if [ $rc -ne 0 ]; then
+rc_parity=$?
+if [ $rc_parity -ne 0 ]; then
   echo "hint: edit .shared-functions or .shared-templates to adjust what is checked for parity." >&2
 fi
-exit $rc
+python tools/check_bom.py
+rc_bom=$?
+if [ $rc_bom -ne 0 ]; then
+  echo "hint: staged text file starts with a UTF-8 BOM. Strip BOM before committing." >&2
+fi
+if [ $rc_parity -gt $rc_bom ]; then
+  exit $rc_parity
+fi
+exit $rc_bom

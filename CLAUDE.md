@@ -653,10 +653,36 @@ between sessions live here.
 - Git pager disabled globally (`core.pager ""`).
 - `python3` alias is broken on this box (Microsoft Store stub); use
   `python` or `py`.
-- PowerShell `Set-Content -Encoding UTF8` silently writes a BOM; use
-  `[System.Text.UTF8Encoding]::new($false)` for BOM-free UTF-8 when
-  writing files from PowerShell. `Get-Content` without `-Encoding
-  UTF8` renders UTF-8 em-dashes as mojibake — pass the flag explicitly.
+
+**PowerShell file-handling gotchas.** PS 5.x has several traps for any
+workflow that edits files. Use this as a pre-flight checklist when a
+command is about to write or read bytes:
+
+- `Set-Content -Encoding UTF8` and `Out-File -Encoding utf8` both
+  silently write a BOM. Git renders the BOM as garbage in commit
+  subjects and hook output. Fix: use
+  `[System.IO.File]::WriteAllText("$PWD\<file>", $content,
+  [System.Text.UTF8Encoding]::new($false))`.
+- `[System.IO.File]::ReadAllText` and `WriteAllText` do NOT respect
+  PowerShell's `cwd` — they use the .NET process working directory
+  (`C:\Windows\System32` when PS launches normally). Always prepend
+  `"$PWD\"` explicitly for both read and write.
+- `Add-Content` writes `\r\n` line endings even when the target file's
+  existing lines are `\n`. Produces mixed line endings silently. Use
+  `[System.IO.File]::WriteAllText` with an explicit `\n` string
+  (`` `n `` in a double-quoted PS string is LF) when appending to a
+  file with known LF endings.
+- `Get-Content` strips blank lines in its display output. Do not trust
+  it for byte-accurate verification of commit-message or manifest
+  structure. Use `python -c "print(repr(open('FILE','rb').read()))"`
+  for byte-level inspection.
+- `Get-Content` without `-Encoding UTF8` renders UTF-8 em-dashes as
+  mojibake. Pass the flag explicitly for display, or use the Python
+  repr pattern above.
+- Multi-command pastes into the PS prompt can silently concatenate
+  (e.g., `certutil -hashfile X SHA256certutil -hashfile X SHA256`).
+  Paste single commands one line at a time; verify the prompt
+  returned between each.
 
 ### Three-site cp1252 pattern
 

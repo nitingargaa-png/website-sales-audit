@@ -4,6 +4,6 @@
 python tools/check_template_parity.py
 rc=$?
 if [ $rc -ne 0 ]; then
-  echo "hint: edit .shared-templates to adjust which files are checked for parity." >&2
+  echo "hint: edit .shared-functions or .shared-templates to adjust what is checked for parity." >&2
 fi
 exit $rc

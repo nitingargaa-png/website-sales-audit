@@ -310,6 +310,159 @@ meta note, when A / B / C ultimately ship (or are explicitly
 dropped), this file should be archived or deleted. Until then
 it retains provenance.
 
+## Verdict (2026-04-24) — Q5 resolved
+
+Q5 answered: demo output is **not fundamentally thin as a
+prospect-facing artifact.** Review of three recent demo outputs
+(`output/mrrooter-2026-04-20.md`,
+`output/warmandcoollondon-2026-04-20.md`,
+`output/mississaugaplumbingservices-2026-04-19.md`) found the
+10-area audit grounded in real page evidence, niche-specific
+idiom landing through Layer 3, and (on the non-disqualified
+case) the full talking-points payload — Feature Detection,
+GHL Automation Gap Assessment, Recommended Pitch Tier, ROI
+Anchor, Open With, Discovery Questions, Objection Handlers,
+5-touch Follow-up Sequence, Close — all substantive.
+
+### Where the thickness is coming from
+
+Three contributors, in rough order of weight:
+
+1. **SKILL.md prompting layer** — the 10-area structure, per-area
+   grounding, and talking-points template. Biggest contributor.
+2. **Layer 3 niche rules** — trade-specific idiom ("utility
+   cupboard for half a day," "burst pipe in a deep freeze").
+3. **Layer 2 via the single `rules_site_structure()` call** —
+   smallest Layer-2 contribution; absence of the other 12
+   `rules_*` functions is not visibly felt in output.
+
+### Implications for A / B / C / D
+
+- **Option A** (shallow audit before demo) — **weakened.** Of
+  the weaknesses surfaced in the Q5 review, only one (missing
+  real PageSpeed data in AREA 7) sits anywhere near A's scope.
+  One signal does not justify adding a new pipeline step.
+- **Option B** (Layer 2 from scrape data) — **weakened.** B
+  would port `rules_*` functions into the demo path. The review
+  did not find their absence as a visible thickness gap. Not
+  justified on thickness grounds.
+- **Option C** (consolidate orchestrators) — **stays weakened**
+  per Q1. Q5 does not rescue it.
+- **Option D** (close `findings_to_layer2.py` drift) — **proceeds
+  independently as BACKLOG item 2.** D's rationale is drift
+  cleanup, not demo thickness. Unaffected by this verdict.
+
+### Overall Fix 10 disposition
+
+A and B are **deferred pending evidence demo output is failing
+to sell** (prospect complaints, conversion drop, or comparable
+operational signal). If that signal surfaces, reopen A/B with
+fresh evidence. D ships as scheduled. C stays dead.
+
+### Enhancement surface surfaced out of scope
+
+The Q5 review also surfaced 16 concrete weaknesses and
+enhancement opportunities in current demo output. None are
+inside Fix 10 A/B/C/D scope. They land in four buckets:
+
+- **SKILL.md prompt grounding** — ungrounded claims (e.g.
+  "branded uniforms appear real" on a page with no readable
+  content), generic-feeling ROI framing, weighting of quick-wins.
+- **Feature-detection fidelity** — UNKNOWN rows for ads pixel,
+  structured data, appointment reminders, invoice tool; missing
+  real PageSpeed data.
+- **Output schema** — rubric opacity (32/62/83 scores unaudited),
+  disqualified-case N/A boilerplate, format drift between recent
+  demos, TRIAGE_META / triage-meta YAML duplication.
+- **Sales-artifact enhancements** — structured competitor
+  benchmarking section, before/after mockup tie-in with bullet
+  previews, direct link to prospect's own Google reviews.
+
+These have been captured as new BACKLOG items in the 3-repo
+drift cleanup and are not Fix 10 work.
+
+### Enumerated findings (W1–W10, E1–E6)
+
+Ten concrete weaknesses (W) and six enhancement opportunities (E)
+surfaced during the Q5 review. Referenced by code from BACKLOG
+items 9–12.
+
+**Weaknesses:**
+
+- **W1. Mobile Speed Score always "Not available."** AREA 7 emits
+  this uniformly across recent demos; no real PageSpeed data pulled.
+  Either wire up the fetch or remove the scored area.
+- **W2. Multiple UNKNOWN rows in FEATURE DETECTION SUMMARY.** Ads
+  pixel, appointment reminder system, invoice/payment tool,
+  LocalBusiness structured data, Service/Review structured data —
+  all commonly UNKNOWN. Either detect properly or drop the row.
+- **W3. Health score (32/62/83) emitted without rubric.** Operator
+  or prospect cannot reconstruct how the number was reached.
+- **W4. Disqualified-prospect outputs include full N/A-degraded
+  talking-points blocks.** Feature Detection → Tier → ROI → Hook all
+  emit as "N/A — disqualified" stanzas. Visual noise; should skip to
+  Disqualification Note.
+- **W5. Hallucinated-or-unverified competitor stat.** The
+  mississaugaplumbingservices demo inline-cites "Mr Rooter Mississauga
+  — 2,000+ Google reviews" in an objection handler. Provenance not
+  auditable from the pipeline. Grounding-hygiene concern.
+- **W6. Format drift between 2026-04-19 and 2026-04-20 outputs.**
+  Numbered vs bulleted quick-wins; differing disqualification-note
+  structure. Not a regression — more that the output shape isn't
+  versioned.
+- **W7. `_test_applicability_*` files in `output/` dir.** 2026-04-18,
+  fixture-shaped, local-only. Verified gitignored (`output/*.md`).
+  Not a repo concern. Closed inline during Q5 review.
+- **W8. Ungrounded claim about imagery authenticity.** The mrrooter
+  demo asserts "photos appear to feature real service professionals
+  in branded uniforms" on a national franchise corporate page with
+  JS-shelled content the audit could not have read imagery from.
+  Grounding failure.
+- **W9. Quick-wins weighting nit.** The warmandcoollondon demo lists
+  "add the copyright year to the footer" as a quick-win alongside
+  high-impact items like response-time promises. Cosmetic nit given
+  equal weight to substantive asks.
+- **W10. TRIAGE_META HTML comment + triage-meta fenced YAML both
+  present.** Overlapping fields across both. Reads as duplicated
+  metadata; may have an intentional separation but unclear.
+
+**Enhancements:**
+
+- **E1. Structured competitor benchmarking section.** One real
+  competitor, same city/trade, with their actual review count,
+  detected platform, and feature-detection stacked against the
+  prospect's. Replaces the W5 one-off inline stat.
+- **E2. Before/after mockup tie-in with bullet previews.** The
+  closing "I can put together a quick sketch" currently has no
+  preview. Including 3 bullet-point previews of what the sketch
+  would show strengthens the close.
+- **E3. Direct link to prospect's own Google reviews** where the
+  audit cites a review count. Reinforces "I looked at your actual
+  reviews" — currently the citation is unverifiable at a glance.
+- **E4. Trade-specific ROI anchoring.** Current ROI framing is
+  generic per trade ($200–$800 plumbing call). Routing ROI through
+  Layer 3 niche rules would carry the same trade-specific weight as
+  the rest of the demo's idiom.
+- **E5. Roll AREA 7 (Speed) into AREA 2 (Mobile Experience) unless
+  real data pulled.** If W1 is closed by wiring up PageSpeed, AREA 7
+  earns its keep. If not, consolidating reduces structural overhead.
+- **E6. Output schema version / changelog comment.** Small metadata
+  field (e.g., `output_schema: "1.0"` in the triage-meta YAML) to
+  track when the output shape changes. Helps future sessions read
+  older outputs consistently.
+
+### Memo status going forward
+
+Q1 and Q5 are now closed. Q2, Q3, Q4 remain open and scoped
+to the specific option they support (Q2 → B, Q3 → A, Q4 → C).
+With A/B deferred and C dead, Q2/Q3/Q4 are effectively dormant
+unless the deferral condition on A/B is triggered.
+
+Fix 10 as a named item is **effectively resolved at the
+scoping level.** Option D ships as BACKLOG item 2. This memo
+should be archived or deleted once item 2 lands, per the
+"Meta note" section at the head of this file.
+
 ## Related references
 
 - `website-sales-audit/docs/SYSTEM_DESIGN_v2.1.md §The

@@ -545,10 +545,6 @@ output/
 
 execution/  (extraction script lives in ../website-audit-builder — see README.md)
   generate_website.py                ← orchestrator (corrected architecture) ✅
-  lead_pipeline.py                   ← lead generation pipeline
-  email_verifier.py                  ← email verification
-  utils.py                           ← shared utilities
-  claude_extractor.py                ← Claude-based extraction
 ```
 
 ### Still To Build

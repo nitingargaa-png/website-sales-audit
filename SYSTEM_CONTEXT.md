@@ -79,7 +79,7 @@ platform costs before labor — margins are thinner here.
 
 ```
 Step 1: Find a prospect
-  └── Google Maps search or lead_pipeline.py script
+  └── Google Maps search
 
 Step 2: Run the audit
   └── Claude Code: "audit https://[url] and prepare full call prep"
@@ -813,16 +813,7 @@ website-sales-audit/
 │   └── BOLT_PLUMBING_TEMPLATE_deprecated.md  ← archived; not loaded by any script
 │
 ├── execution/  (extraction script lives in ../website-audit-builder — see README.md)
-│   ├── generate_website.py            ← Prompt assembler + orchestrator (~450 lines) ✅
-│   │
-│   │   NOTE: The 4 scripts below exist on the owner's local machine from a prior
-│   │   project phase but are NOT included in this document zip. They are part of
-│   │   the full project at C:\Users\canad\projects\website-sales-audit\ but managed
-│   │   separately. Reviewers: you do not need these files to review this system.
-│   ├── lead_pipeline.py               ← Lead gen from Google Maps (local machine only)
-│   ├── email_verifier.py              ← Email verification (local machine only)
-│   ├── utils.py                       ← Shared utilities (local machine only)
-│   └── claude_extractor.py            ← Claude-based extraction (local machine only)
+│   └── generate_website.py            ← Prompt assembler + orchestrator (~450 lines) ✅
 │
 ├── input/
 │   └── urls.txt                       ← Prospect URLs for batch processing

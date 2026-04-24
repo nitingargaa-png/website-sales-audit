@@ -49,11 +49,7 @@ website-sales-audit\
 │       └── roofing.md                     ← roofing niche rules ✅
 │
 ├── execution\  (extraction script lives in ../website-audit-builder — see README.md)
-│   ├── generate_website.py                ← prompt package assembler ✅
-│   ├── lead_pipeline.py                   ← lead generation pipeline ✅
-│   ├── email_verifier.py                  ← email verification ✅
-│   ├── utils.py                           ← shared utilities ✅
-│   └── claude_extractor.py               ← Claude-based extraction ✅
+│   └── generate_website.py                ← prompt package assembler ✅
 │
 ├── input\
 │   └── urls.txt                           ← prospect URLs for batch auditing ✅
@@ -195,12 +191,7 @@ There are two modes:
 
 ### Phase A: Find a prospect
 
-Use Google Maps or your lead pipeline:
-```bash
-python3 execution/lead_pipeline.py --search "plumbers in Toronto ON" --limit 5 --dry-run
-```
-
-Or just search Google Maps manually for your trade + city.
+Search Google Maps for your trade + city.
 
 Target businesses with:
 - Bad or missing website
@@ -609,10 +600,7 @@ No separate niche prompt files needed for Voice AI. The v1.5 template is univers
 ## PART 5: DAILY OPERATING RHYTHM
 
 ### Finding prospects (30 min/day)
-```bash
-python3 execution/lead_pipeline.py --search "plumbers in Mississauga ON" --limit 10
-```
-Or search Google Maps manually. Target: 3-5 audits per week.
+Search Google Maps for your trade + city. Target: 3-5 audits per week.
 
 ### Running audits (10 min each, in Claude Code)
 ```

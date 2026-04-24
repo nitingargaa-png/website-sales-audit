@@ -599,45 +599,50 @@ def check_templates(project_root):
     return True, mismatches, sibling_root
 
 
-def check_functions(project_root):
-    """Run .shared-functions checks. Returns (ran, mismatches, sibling_root)."""
-    manifest = project_root / FUNCTIONS_MANIFEST
-    if not manifest.is_file():
-        return False, [], None
-    directive, entries = read_functions_manifest(manifest)
+def _check_one_functions_manifest(project_root, manifest_path):
+    """Run checks for a single .shared-functions* manifest file.
+
+    Returns a list of mismatch identifiers (possibly empty on success).
+    Prints an 'OK: N function(s) in sync with <sibling_root>' line on
+    success, identical in format to the single-manifest behavior.
+    Error messages reference manifest_path.name so operators can
+    disambiguate which of several manifests failed.
+    """
+    manifest_name = manifest_path.name
+    directive, entries = read_functions_manifest(manifest_path)
     if entries is None:
         # malformed manifest; read_functions_manifest already printed
-        return True, ["__manifest_malformed__"], None
+        return ["__manifest_malformed__"]
     # sibling resolution: manifest directive > env > error
     env_override = os.environ.get("SHARED_FUNCTION_SIBLING")
     sibling_name_or_path = directive or env_override
     if sibling_name_or_path is None:
         print(
-            "ERROR: no sibling configured for {}".format(FUNCTIONS_MANIFEST),
+            "ERROR: no sibling configured for {}".format(manifest_name),
             file=sys.stderr,
         )
         print(
             "  set the '# sibling: <name>' directive in {} or "
-            "SHARED_FUNCTION_SIBLING env var.".format(FUNCTIONS_MANIFEST),
+            "SHARED_FUNCTION_SIBLING env var.".format(manifest_name),
             file=sys.stderr,
         )
-        return True, ["__sibling_missing__"], None
+        return ["__sibling_missing__"]
     sibling_root = resolve_sibling(
         project_root, sibling_name_or_path
     )
     if not sibling_root.is_dir():
         print(
             "ERROR: sibling project not found at {} (for {})".format(
-                sibling_root, FUNCTIONS_MANIFEST
+                sibling_root, manifest_name
             ),
             file=sys.stderr,
         )
         print(
             "  set the '# sibling: <name>' directive in {} or "
-            "SHARED_FUNCTION_SIBLING env var.".format(FUNCTIONS_MANIFEST),
+            "SHARED_FUNCTION_SIBLING env var.".format(manifest_name),
             file=sys.stderr,
         )
-        return True, ["__sibling_missing__"], sibling_root
+        return ["__sibling_missing__"]
     mismatches = []
     trailing_checked = set()
     for local_rel, local_fn, remote_rel, remote_fn in entries:
@@ -719,7 +724,36 @@ def check_functions(project_root):
                 len(entries), sibling_root
             )
         )
-    return True, mismatches, sibling_root
+    return mismatches
+
+
+def check_functions(project_root):
+    """Run .shared-functions* checks. Returns (ran, mismatches, sibling_root).
+
+    Discovers every file in project_root whose name matches the glob
+    .shared-functions* (sorted lexicographically for deterministic
+    iteration order). Each discovered manifest has its own sibling
+    directive and is checked independently by
+    _check_one_functions_manifest; mismatches are concatenated across
+    all manifests.
+
+    ran is True iff at least one manifest was discovered; when zero
+    files match, behavior is identical to the pre-glob state: returns
+    (False, [], None) and prints nothing. sibling_root is always None
+    because multiple manifests may point at different siblings; callers
+    that need per-manifest siblings look inside the helper.
+    """
+    manifests = sorted(
+        p for p in project_root.glob(".shared-functions*") if p.is_file()
+    )
+    if not manifests:
+        return False, [], None
+    all_mismatches = []
+    for manifest in manifests:
+        all_mismatches.extend(
+            _check_one_functions_manifest(project_root, manifest)
+        )
+    return True, all_mismatches, None
 
 
 def check_sections(project_root):

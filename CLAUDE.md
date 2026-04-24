@@ -774,6 +774,7 @@ The `commit -F` pattern is cross-platform; the path literal isn't.
 
 ### Diagram-tree edits — annotation vs EDIT
 
+<!-- shared-section:diagram-tree-edits start -->
 When a filename reference sits inside an indented ASCII/Unicode
 directory tree, repointing to an absolute or relative sibling path
 produces structurally wrong diagrams (the sibling path visually
@@ -787,6 +788,7 @@ execution/  (extraction script lives in ../website-audit-builder — see README.
 Locked as canonical after Fix 12's Edit 18 (`a02608f`, in
 `website-sales-audit`). Applies to any doc that contains indented
 directory-tree diagrams.
+<!-- shared-section:diagram-tree-edits end -->
 
 ### Fix 16 schema-drift guidance
 

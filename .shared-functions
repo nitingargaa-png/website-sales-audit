@@ -1,0 +1,16 @@
+# sibling: website-audit-builder
+# Functions that must remain semantically identical across website-sales-audit and website-audit-builder.
+# Checked by tools/check_template_parity.py on every commit via the pre-commit hook, with CRLF normalized to LF and trailing whitespace stripped per line, then strict equality.
+# Format: <local/path.py>::<fn> [<=> <remote/path.py>::<fn>] - right side optional. Blank lines and # comments ignored.
+execution/findings_to_layer2.py::apply_structure_rules
+execution/findings_to_layer2.py::rules_contact_booking
+execution/findings_to_layer2.py::rules_content_clarity
+execution/findings_to_layer2.py::rules_first_impressions
+execution/findings_to_layer2.py::rules_lead_followup
+execution/findings_to_layer2.py::rules_local_presence
+execution/findings_to_layer2.py::rules_mobile_experience
+execution/findings_to_layer2.py::rules_photos
+execution/findings_to_layer2.py::rules_security
+execution/findings_to_layer2.py::rules_site_structure
+execution/findings_to_layer2.py::rules_speed
+execution/findings_to_layer2.py::rules_trust_credibility

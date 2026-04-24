@@ -692,6 +692,10 @@ AREA_RULE_FUNCTIONS = {
 
 
 # ── Main Layer 2 assembler ─────────────────────────────────────────────────────
+# Note: generate_layer2 is intentionally asymmetric across website-sales-audit
+# and website-audit-builder. WAB assembles the full builder Layer 2; this emits
+# the audit-side subset. NOT enrolled in .shared-functions. See WAB's
+# execution/findings_to_layer2.py parity-enrollment comment block for context.
 
 def generate_layer2(findings: dict, business_data: dict) -> str:
     """

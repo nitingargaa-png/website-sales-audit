@@ -784,8 +784,9 @@ annotate the parent folder line instead. Example:
 execution/  (extraction script lives in ../website-audit-builder — see README.md)
 ```
 
-Locked as canonical after Fix 12's Edit 18 (`a02608f`, in this repo).
-Applies to any doc that contains indented directory-tree diagrams.
+Locked as canonical after Fix 12's Edit 18 (`a02608f`, in
+`website-sales-audit`). Applies to any doc that contains indented
+directory-tree diagrams.
 
 ### Fix 16 schema-drift guidance
 

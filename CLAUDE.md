@@ -654,6 +654,7 @@ between sessions live here.
 - `python3` alias is broken on this box (Microsoft Store stub); use
   `python` or `py`.
 
+<!-- shared-section:ps5-file-handling-gotchas start -->
 **PowerShell file-handling gotchas.** PS 5.x has several traps for any
 workflow that edits files. Use this as a pre-flight checklist when a
 command is about to write or read bytes:
@@ -683,6 +684,12 @@ command is about to write or read bytes:
   (e.g., `certutil -hashfile X SHA256certutil -hashfile X SHA256`).
   Paste single commands one line at a time; verify the prompt
   returned between each.
+- Tab-completion and stat-output paste can produce a `+`-prefixed line
+  that PS parses as arithmetic and silently swallows. Symptom: paste
+  a snippet that begins with `+` (common in `git diff` stat output or
+  some completion suggestions) and the prompt returns with no error
+  and no effect. Fix: strip leading `+` before pasting, or wrap the
+  command in quotes / a script block.
 - When rewriting a text file from scratch rather than editing specific
   lines, check for a pre-existing BOM before writing — stripping a BOM
   is a real byte-level change. Flag it explicitly in the commit message
@@ -702,6 +709,38 @@ command is about to write or read bytes:
   session, or use `git --no-pager <subcommand>` for `log`, `diff`,
   `show`, etc. Any git command that prints more than one screen of
   output is a candidate.
+- PowerShell 5.x `|` and `>` are not binary-safe. UTF-8 bytes get
+  re-encoded to UTF-16 LE with a BOM when piped or redirected through
+  the shell, producing bogus byte counts and corrupted manifest
+  output. Symptom observed during recon-tooling work: 419 / 2047 / 840
+  bogus measurements until diagnosed. Fix: for any byte-level
+  measurement, wrap the entire operation in a single
+  `python -c "..."` call or `python script.py` invocation. Never
+  chain binary data through a PS pipe or redirect. Note that
+  `Add-Content -Encoding UTF8` is also suspect (introduced CR into
+  an LF-only file during a deliberate-break test).
+- PS 5.x lacks `Get-Content -AsByteStream` and `Format-Hex -Count` —
+  both are PS 7+ only. Symptom: cmdlet not found, or `-Count` parses
+  as a positional argument and the cmdlet runs against the wrong
+  input. Fix: for byte-level inspection on this box, use
+  `python -c "print(open('path', 'rb').read(N))"` instead of any PS
+  cmdlet that promises raw-byte access.
+- Browsers strip the leading `.` from dotfile downloads on Windows.
+  A file named `.shared-sections` downloaded via the browser lands as
+  `shared-sections` (no dot prefix) in the Downloads folder. Symptom:
+  `git status` shows the dotfile as missing while a sibling
+  no-dot-prefix file appears untracked. Fix: rename after download
+  (`Rename-Item shared-sections .shared-sections`) or use
+  `curl -O` / `git clone` instead of browser save.
+- `cmd.exe` flags do not all work through PowerShell's `copy` alias.
+  `copy /Y src dst` errors with "A positional parameter cannot be
+  found that accepts argument '/Y'" because PS's `copy` is an alias
+  for `Copy-Item`, which doesn't accept cmd-style flags. Fix: use
+  `Copy-Item -Force src dst` in PS, or invoke the real cmd.exe
+  builtin via `cmd /c copy /Y src dst`. The same trap exists for
+  other cmd flags (`/E`, `/V`, etc.) routed through `xcopy`-aliased
+  commands.
+<!-- shared-section:ps5-file-handling-gotchas end -->
 
 ### Three-site cp1252 pattern
 

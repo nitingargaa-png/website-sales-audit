@@ -1757,23 +1757,51 @@ Most of what's missing is straightforward to add.]
 *(Not for sharing with the client — your internal reference)*
 
 ```
-<!-- TRIAGE_META
-url: [prospect URL — copy exactly from the audit header]
-business_name: [Business Name]
-niche: [Plumbing|HVAC|Electrical|Roofing|Landscaping|Cleaning|Garage Doors|Moving|Glass|Painting|Pest Control|General]
-city: [City]
-province_state: [Province/State]
-gbp_reviews: [number or null]
-gbp_rating: [x.x or null]
-years_in_business: [number or null]
-copyright_year: [year or null]
-platform: [WordPress|Wix|Squarespace|Webflow|GHL|Scorpion|Thryv|Other|Unknown]
-js_heavy: [true|false]
--->
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 TALKING POINTS — YOUR INTERNAL SALES REFERENCE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**DISQUALIFIED-PROSPECT GATING**
+
+If the `disqualifiers` field in the TRIAGE_META block (see TRIAGE_META BLOCK
+section below) will be non-empty for this prospect — i.e. any of
+`national_chain`, `under_construction`, `out_of_service_area`, `wrong_trade`,
+or `dead_site` apply — emit only the FEATURE DETECTION SUMMARY section
+below, then skip directly to the DISQUALIFICATION NOTE block (template
+below), then proceed to the TRIAGE_META YAML block.
+
+In disqualified outputs, do NOT emit GHL AUTOMATION GAP ASSESSMENT,
+RECOMMENDED PITCH TIER FOR THIS PROSPECT, ROI ANCHOR, DISCOVERY QUESTIONS,
+OBJECTION HANDLERS, or any downstream pitch sections. Disqualified prospects
+are not pitched, so degraded "N/A — disqualified" stanzas in those sections
+are visual noise.
+
+The FEATURE DETECTION SUMMARY is still emitted because detection ran and
+the data is informationally useful for the operator's own records.
+
+**DISQUALIFICATION NOTE — block template (disqualified prospects only):**
+
+──────────────────────────────────────
+DISQUALIFICATION NOTE
+──────────────────────────────────────
+[Disqualifier(s) detected: list each enum value from the `disqualifiers`
+field, one per line, with a 1–2 sentence grounding citation pointing to the
+specific Phase 1 finding or visible page evidence that triggered it.]
+
+[Routing implication: 1 sentence stating that this prospect will be
+classified as `disqualified_per_audit` by ghl-triage's Fix 8 gate and
+skipped from outreach. Reference the disqualifier(s) by name.]
+
+[Re-audit trigger: 1 sentence stating the condition under which a future
+audit could reclassify this prospect — for example, "If a specific local
+franchisee URL is discovered later, audit that URL as a separate prospect"
+for `national_chain`, or "If a US/Canada branch surfaces, re-audit that
+URL as a separate prospect" for `out_of_service_area`. Omit if no plausible
+re-audit trigger applies (e.g., `wrong_trade`).]
+
+Follow-up sequence: N/A — do not send outreach.
+Competitor edge: N/A — disqualified prospects are not benchmarked.
+Objection handlers: N/A — no call to make on this URL.
 
 ──────────────────────────────────────
 FEATURE DETECTION SUMMARY

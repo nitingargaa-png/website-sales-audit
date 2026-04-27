@@ -934,8 +934,12 @@ Area 3: 2 × 15% × 4 = 12
 - Report B: show the band (🟢/🟡/🔴) AND the numeric score in the "OVERALL HEALTH" line.
 - Report C: do not display the number.
 - Talking Points: display the score + band at the top of the Feature Detection section
-  for internal pitch tiering. Score ≤ 40 → Package 2 or 3 minimum. Score 41–65 →
-  Package 1 + automation add-ons. Score 66+ → automation-only pitch, no rebuild.
+  for internal pitch tiering. The pitch-tier threshold mapping (score → package
+  recommendation) is an internal sales-tiering rule used by the operator to assign the
+  tier in the RECOMMENDED PITCH TIER FOR THIS PROSPECT section. Do NOT surface the
+  threshold mapping verbatim in any prospect-facing report (Report A/B/C) or in the
+  Talking Points output. The conclusion appears in RECOMMENDED PITCH TIER FOR THIS
+  PROSPECT; the rule itself stays internal.
 
 **Rules for honest scoring:**
 - Never inflate a score to soften the message. A broken mobile site is a 1, not a 3.
@@ -1408,6 +1412,17 @@ Use the weighted score bands from Phase 2:
 - 🟡 Some Gaps: 55–79
 - 🔴 Needs Significant Work: 0–54
 
+HOW THIS SCORE WAS REACHED (band-keyed disclosure — Report B only):
+- Score 0–54 (🔴): publish the full inline rubric block. Format as a markdown-style
+  table with columns | Area | Weight | This site's element score (1–5) | Contribution |
+  one row per Area 1–10, then a Total row showing the sum equal to the published
+  score. The 10 area names and weights match the WEIGHTED HEALTH SCORE section at the
+  top of this skill. Element scores are this site's actual ratings from Phase 2.
+  Contribution = Element × Weight × 4.
+- Score 55–79 (🟡): publish a single compact line — "Score derived from 10 weighted
+  areas; mobile, trust, and contact weighted heaviest." Do not show the table.
+- Score 80–100 (🟢): publish band label only. Do not explain the rubric.
+
 [Show the numeric score here in Report B only. Do NOT include it in Report A or C.]
 
 TOP 3 ISSUES TO FIX FIRST
@@ -1613,7 +1628,8 @@ Do NOT recommend specific platforms or builders.]
 3 QUICK WINS — THINGS YOU COULD DO THIS WEEK
 ─────────────────────────────────────────────────
 [List 3 small, low-effort things the owner (or their current web person) could
-fix quickly without rebuilding the whole site. These should feel helpful and
+fix quickly without rebuilding the whole site. Format as a numbered list
+(1. 2. 3.), one item per number — not bulleted. These should feel helpful and
 non-threatening — not a sales pitch. Order by lead-impact, not by ease:
 prefer items that affect lead capture, response time, or mobile usability
 over purely cosmetic items (e.g., a missing copyright year or a stale "©

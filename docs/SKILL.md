@@ -1505,6 +1505,16 @@ Are licenses, insurance, or years in business mentioned?
 Specific observations: e.g., "There are 4 testimonials on the homepage
 but no review count or link to Google reviews."]
 
+[Google reviews link directive: when AREA 5 cites a review count for the
+prospect's own GBP, append a clickable link to their Google reviews in
+parenthetical form immediately after the count. Preferred format:
+`[See reviews](https://maps.google.com/?cid=NNNNNNNNN)` using the CID
+captured in Phase 1 Step 5D. If CID is unavailable, fall back to
+`[See reviews](<GBP profile URL captured in Phase 1>)`. Always include
+the link when a count is cited, regardless of count value — the link's
+job is verification ("I really did look at your reviews"), not
+celebration. Example: "Their GBP shows 47 reviews ([see reviews](https://maps.google.com/?cid=12345678))."]
+
 Why it matters:
 [1–2 sentences. Tailor to trade — e.g., for home services:
 "A homeowner letting a stranger into their house will always pick the
@@ -2108,13 +2118,53 @@ looks dated on a phone — you're paying to send people somewhere that doesn't c
 What I look at is what happens *after* someone finds you."
 
 ──────────────────────────────────────
-COMPETITOR EDGE (if found in Phase 1)
+COMPETITOR EDGE (structured — internal use only)
 ──────────────────────────────────────
-[If you found a competitor during Phase 1, use this only verbally — never
-put it in client reports. Example: "I noticed the top result when I searched
-for '[trade] in [city]' has 80+ Google reviews and photos of their actual
-team and trucks. That's what your site is competing against — and it's
-very beatable with the right setup."]
+**Use this block only verbally during the call or as operator pitch prep —
+never put competitor names or this table into Report A, B, or C.** L323
+governs. The table below is your structured benchmark for shaping the
+verbal pitch.
+
+**Competitor selection rule.** Pick ONE competitor:
+- Same trade, same city as the prospect.
+- Highest Google reviews count among local results (use Brave Search
+  "[trade] in [city]" or Phase 1 Step 6 findings).
+- **Exclude national franchise / multi-location chains** (e.g., Mr Rooter,
+  Roto-Rooter, Mr Electric, Aire Serv, Benjamin Franklin, Mr Handyman, and
+  any brand operating under a franchisor). Pitching an independent SMB
+  against a national chain is structurally unfair and weakens credibility.
+  If the top-reviewed result is a national chain, fall back to the
+  highest-reviewed independent local competitor.
+- One competitor only. No backup mentions.
+
+**Benchmark table** (fill all 7 rows; fill provenance per directive below):
+
+| Signal | This site | [Competitor name] |
+|---|---|---|
+| Google reviews count | [count] [provenance] | [count] [provenance] |
+| Platform | [platform] [provenance] | [platform] [provenance] |
+| Online booking | YES / NO | YES / NO |
+| Live chat | YES / NO | YES / NO |
+| Service-area pages | YES / NO | YES / NO |
+| Photos (real, not stock) | YES / NO | YES / NO |
+| Mobile speed observation | [1-line qualitative] | [1-line qualitative] |
+
+**Provenance directive.** Quantitative cells (Google reviews count) and
+the Platform cell MUST carry a source citation in one of three accepted
+forms, in order of preference:
+1. **Fetched URL** the operator can re-visit. Format: `[https://...]`.
+   Example: `1,840 [https://www.google.com/maps/place/...]`.
+2. **Brave Search query + date.** Format: `[Brave Search "query" YYYY-MM-DD]`.
+   Example: `1,840 [Brave Search "plumbing in mississauga" 2026-04-27]`.
+3. **Inferred from observable fact.** Format: `[detected: <observable>]`.
+   Example for Platform: `Custom WordPress [detected: wp-content paths in HTML]`.
+
+Feature-detection rows (Online booking, Live chat, Service-area pages,
+Photos, Mobile speed) do NOT require per-row provenance — their
+provenance is implicit in Phase 1 detection.
+
+A row missing provenance on a required cell is a Phase 4 quality-check
+failure (item 18).
 
 ──────────────────────────────────────
 
@@ -2133,7 +2183,8 @@ Research pack (required — do not skip any):
 - Business name, trade, city, owner first name (if known from About page)
 - The #1 issue from Report A (exact wording)
 - One quick win from Report B's "3 QUICK WINS" section (exact wording)
-- Competitor edge signal from Phase 1 Step 6 (review count gap or specific difference)
+- Competitor edge signal from the COMPETITOR EDGE benchmark table — the
+  Google reviews count gap row is the strongest pull for cold email.
 - Weighted health score and band from Phase 2 (e.g., "41/100 — 🔴")
 - ONE live signal from the last 30 days — check in this order, stop at first hit:
   1. Their Google Business Profile reviews → newest review (date + content)
@@ -2143,8 +2194,8 @@ Research pack (required — do not skip any):
   sequence and ask a human to surface a signal before sending Touch 3 onward.
 
 **PERSONALIZATION TIER — set once per prospect, applies to every touch:**
-- TIER A (strongest): specific audit issue + named competitor stat + live signal → reference all 3
-- TIER B (standard): specific audit issue + named competitor stat → reference both
+- TIER A (strongest): specific audit issue + COMPETITOR EDGE table signal (e.g., the review-count gap row) + live signal → reference all 3
+- TIER B (standard): specific audit issue + COMPETITOR EDGE table signal → reference both
 - TIER C (minimum): specific audit issue only → acceptable only for Touches 1–2
 Record which tier applies in the Talking Points before drafting the touches.
 
@@ -2254,8 +2305,22 @@ THE CLOSE
 ──────────────────────────────────────
 "My goal today isn't to pressure you — just to show you what's possible.
 Can I put together a quick sketch of what [Business Name]'s homepage
-could look like? No cost, no commitment — if you like the direction,
-we can talk about next steps. If not, no hard feelings."
+could look like? It would show:
+- **[Mobile/contact-friction fix]** — [≤12-word justification grounded in this prospect's audit]
+- **[Trust/photo/review fix]** — [≤12-word justification grounded in this prospect's audit]
+- **[Local-SEO fix]** — [≤12-word justification grounded in this prospect's audit]
+No cost, no commitment — if you like the direction, we can talk about
+next steps. If not, no hard feelings."
+
+[Bullet directive: each bullet must be a SPECIFIC change derived from
+this prospect's audit findings, not boilerplate. Bullet 1 covers
+mobile/contact-friction (e.g., tap-to-call missing, slow mobile load,
+buried phone). Bullet 2 covers trust/photo/review (e.g., stock images,
+no review count visible, missing testimonials). Bullet 3 covers
+local-SEO (e.g., no LocalBusiness schema, no service-area pages,
+city not in title tags). Format is **bold change** + ≤12-word
+justification. Cite the audit specifically — not generic "modern design"
+copy.]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
@@ -2384,6 +2449,13 @@ Do NOT include a "Quality Check" section in the output.
     signals (GBP, structured data, response codes). The owner-recognition
     test from item 3 applies even harder here: if the fetch did not render,
     the owner has no way to confirm what you describe.
+
+18. **COMPETITOR EDGE provenance** — confirm every quantitative cell
+    (Google reviews count, Platform) in the COMPETITOR EDGE table has a
+    provenance citation in one of the three accepted forms: a fetched URL
+    the operator can re-visit, a `[Brave Search "query" YYYY-MM-DD]` tag,
+    or a `[detected: <observable>]` note. Cells without provenance are a
+    fail — re-run sourcing or remove the row.
 
 ---
 

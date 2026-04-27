@@ -1592,10 +1592,13 @@ WHAT THIS IS COSTING YOU
 [3–5 sentences. Pull together the 2–3 biggest issues and frame them
 as real business cost. Use the trade job values above only as grounding
 for logic-based estimates — do not invent specific revenue numbers.
-Example: "For a plumbing company, a single new customer is typically worth
-$200–$800. If even a handful of visitors each month can't figure out how
-to reach you or don't trust what they see, that's real money walking to
-your competitors — and it's completely fixable."]
+Pick the row matching THIS prospect's trade from the TRADE JOB VALUES
+table; do not default to plumbing ranges if the trade is different.
+Frame: "For a [trade] company, a single new customer is typically worth
+[range from the matching trade row]. If even a handful of visitors each
+month can't figure out how to reach you or don't trust what they see,
+that's real money walking to your competitors — and it's completely
+fixable."]
 
 ─────────────────────────────────────────────────
 WHAT A NEW WEBSITE WOULD DO FOR YOU
@@ -1611,7 +1614,11 @@ Do NOT recommend specific platforms or builders.]
 ─────────────────────────────────────────────────
 [List 3 small, low-effort things the owner (or their current web person) could
 fix quickly without rebuilding the whole site. These should feel helpful and
-non-threatening — not a sales pitch. Examples:
+non-threatening — not a sales pitch. Order by lead-impact, not by ease:
+prefer items that affect lead capture, response time, or mobile usability
+over purely cosmetic items (e.g., a missing copyright year or a stale "©
+2019" footer is a distant third behind a broken tap-to-call link or a
+form with no autoresponse). Examples:
 - "Add your city name to the page title so Google can connect you to local searches."
 - "Turn your phone number into a tap-to-call link so mobile visitors can dial you in one tap."
 - "Add a footer line with your address and phone number so it appears on every page."
@@ -2319,6 +2326,19 @@ Do NOT include a "Quality Check" section in the output.
 
     Final check: read one full paragraph aloud. If it sounds like a corporate
     whitepaper instead of a friend talking to a contractor, rewrite it.
+
+17. **JS-shelled / minimal-HTML grounding** — if Phase 1 fetch returned an
+    app-shell or otherwise minimal HTML (no rendered body content, no visible
+    copy, no detectable image elements), do NOT describe rendered content as
+    if you observed it. Specifically: do not characterize photo subjects
+    ("real team in branded uniforms," "stock photos of generic smiling
+    people"), do not quote on-page copy, and do not rate Check 8 (Photos)
+    or any content-completeness check based on what the page "appears to
+    show." State the fetch limitation in the relevant section and rate
+    only on what is verifiable from HTML, headers, schema, or external
+    signals (GBP, structured data, response codes). The owner-recognition
+    test from item 3 applies even harder here: if the fetch did not render,
+    the owner has no way to confirm what you describe.
 
 ---
 

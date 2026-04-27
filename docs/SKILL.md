@@ -1519,7 +1519,7 @@ AREA 7 — SPEED  [✅ / ⚠️ / ❌]
 What we found:
 Mobile Speed Score: [X]/100  — OR — Mobile Speed Score: Not available
 [1–2 sentences interpreting this in plain English.
-If score is unavailable, describe what you observed about the page weight.]
+If score is unavailable, this section MUST contain 2–3 specific observations about page weight from the page itself — e.g., full-screen video background, oversized hero image, excessive content loading before first paint. "Not available" alone is forbidden as a complete answer; the qualitative observation is the substitute, not an optional add-on.]
 
 Why it matters:
 [1–2 sentences. "If your site takes more than 3 seconds to open on a phone,
@@ -1797,9 +1797,10 @@ FEATURE DETECTION SUMMARY
 | Facebook/Google Ads pixel | YES/NO | — | [if YES: ad spend confirmed — every lead needs instant follow-up; high-urgency pitch] |
 | Social media links | YES/NO | [platforms] | [if present: pitch social DM auto-capture into CRM] |
 | Invoice / payment tool | YES/NO | [vendor] | [if present: pitch estimate follow-up automation] |
-| Appointment reminder system | YES/NO | — | [if NO: pitch pre-job reminder sequence — reduces no-shows] |
 | LocalBusiness structured data | YES/NO | — | [if NO: ❌ Google has nothing structured for local pack/voice/AI search; if YES but missing areaServed/openingHours: ⚠️ partial] |
 | Service / Review structured data | YES/NO | — | [most home service sites lack this — quick-win pitch hook, no rebuild needed] |
+
+**No UNKNOWN for HTML-scannable signals.** The following rows are detectable from raw HTML scan in Phase 1 and MUST emit YES or NO only — never UNKNOWN: Ads pixel, Invoice / payment tool, LocalBusiness structured data, Service / Review structured data. If the raw HTML scan finds none of the documented markers (Phase 1 blocks J, K, L), emit NO. UNKNOWN is reserved for signals that genuinely cannot be determined from a single fetch — e.g., booking platform vendor identity behind a JS shell, or call-tracking-tool vendor when the swap script is async. Treating "didn't render in fetch" as UNKNOWN is the failure mode being closed.
 
 Fill this table from Phase 1 Step 5 findings before writing the reports.
 A completed table means you will never pitch something they already have.

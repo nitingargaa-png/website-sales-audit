@@ -2246,7 +2246,7 @@ Touch 2 — Day 3 — The quick win nudge
 Touch 3 — Day 7 — The competitor gap (requires Phase 1 competitor data)
   Structure: TRIGGER → INSIGHT → ASK
   Subject: "saw this" or "comparison" (2 words, lowercase)
-  Lead with the named competitor signal. Be specific.
+  Lead with the competitor-gap signal from Phase 1. Be specific.
     Example: "Hey [First Name] — checked how you stack up against the top result
     when I searched [trade] [city]. They show 147 Google reviews on their homepage;
     you show none, even though I know you've earned plenty. Different first

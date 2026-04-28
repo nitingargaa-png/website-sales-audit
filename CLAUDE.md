@@ -21,7 +21,7 @@ Primary market: USA + Canada (GTA focus).
 ```
 audit https://[url] and prepare full call prep
 ```
-Executes: docs/SKILL.md (v11)
+Executes: docs/SKILL.md (v12)
 Outputs: 4 reports saved to output/[businessname]-[date].md
 
 **What happens under the hood (in order):**
@@ -182,11 +182,16 @@ every single time, no exceptions:
    Source: docs/SKILL.md FOLLOW-UP SEQUENCE block.
 
 5. WEIGHTED HEALTH SCORE — every audit must produce a 0–100 overall score
-   (per-area 1–5 × home-services weights) displayed in Report B and in the
-   Talking Points Feature Detection section. Score drives pitch tier:
-   ≤40 → Package 2 or 3 minimum; 41–65 → Package 1 + automation add-ons;
-   66+ → automation-only pitch, no rebuild. Source: docs/SKILL.md Phase 2
-   "WEIGHTED HEALTH SCORE" block.
+   (per-area 1–5 × home-services weights). Disclosure surface is band-keyed
+   per docs/SKILL.md (W3 close, session 25): Report B publishes the full
+   reconstructable rubric for scores 0–54, a one-line attribution for 55–79,
+   and band label only for 80–100; Talking Points Feature Detection shows
+   the score and band only. The pitch-tier threshold mapping (score →
+   package recommendation) is internal sales-tiering used by the operator
+   and must NOT be surfaced verbatim in any prospect-facing report or in
+   the Talking Points output; the conclusion appears in RECOMMENDED PITCH
+   TIER FOR THIS PROSPECT. Source: docs/SKILL.md Phase 2 "WEIGHTED HEALTH
+   SCORE" block.
 
 If any of these 5 items is missing from the output, the audit is incomplete.
 Run the missing section before declaring the task done.

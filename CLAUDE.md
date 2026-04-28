@@ -1,8 +1,6 @@
 # Website Sales Audit — AI Agency Project
 # Claude Code Project Configuration
 # Place this file at: C:\Users\canad\projects\website-sales-audit\CLAUDE.md
-# Last updated: April 2026 — v3 (SKILL.md bumped to v12: weighted 0–100 health score,
-#                                 research-phase follow-up sequence, de-AI-ify QC pass)
 
 ---
 
@@ -32,7 +30,7 @@ Outputs: 4 reports saved to output/[businessname]-[date].md
 **Automatic triage handoff (runs after every audit — do not skip):**
 After saving the audit report to output/, immediately run:
 ```
-python3 execution/triage_handoff.py --audit output/[businessname]-[date].md
+python execution/triage_handoff.py --audit output/[businessname]-[date].md
 ```
 This scores the prospect across all four GHL services (MCTB, VAAI, GRM, WEB)
 using the audit findings. Results land in ../ghl-triage/output/ automatically.
@@ -583,7 +581,7 @@ If Claude Code hangs for 30+ minutes fetching competitor sites:
    "stop fetching. write all four report outputs now based on what you gathered,
    skip competitor section, save to output/[businessname]-audit.md"
 3. After the audit saves, still run the triage handoff:
-   `python3 execution/triage_handoff.py --audit output/[businessname]-audit.md`
+   `python execution/triage_handoff.py --audit output/[businessname]-audit.md`
 
 ---
 
@@ -591,20 +589,20 @@ If Claude Code hangs for 30+ minutes fetching competitor sites:
 
 **Mode 1 — Automatic (default after every audit):**
 ```bash
-python3 execution/triage_handoff.py --audit output/[businessname]-[date].md
+python execution/triage_handoff.py --audit output/[businessname]-[date].md
 ```
 Runs all four services. Scores from audit findings — no re-fetch needed.
 
 **Mode 2 — Manual, specific service:**
 ```bash
-python3 execution/triage_handoff.py --audit output/[file].md --service MCTB
+python execution/triage_handoff.py --audit output/[file].md --service MCTB
 ```
 
 **Mode 3 — Batch (catch up on existing audit files):**
 ```bash
-python3 execution/triage_handoff.py --batch
-python3 execution/triage_handoff.py --batch --force   # re-triage already-done files
-python3 execution/triage_handoff.py --batch --dry-run # preview without running
+python execution/triage_handoff.py --batch
+python execution/triage_handoff.py --batch --force   # re-triage already-done files
+python execution/triage_handoff.py --batch --dry-run # preview without running
 ```
 
 Triage results always land in: `../ghl-triage/output/`

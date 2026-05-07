@@ -1332,6 +1332,13 @@ Tally how many of these fire for the prospect:
 3. **Service area count ≥ 3 distinct cities.** Sourced from Phase 1 service-area extraction. Cities listed on a "service area" page or in copy. Province/state-level coverage alone (e.g. "Greater Toronto Area") counts as 1.
 4. **Niche file has `## PAGE MODE PREFERENCE` set to `multi`.** Look at `docs/niches/<trade>.md` — if a `## PAGE MODE PREFERENCE` section exists with body `multi`, signal fires. If section absent or body is `single` or anything else, signal does NOT fire.
 
+**Signal extraction sources.** Phase 1 frontend fetch is the primary source, but signals 1 and 3 should not be marked unknown solely because the prospect's site is JavaScript-rendered or content-thin. If frontend data is unavailable for signal 1 or 3, attempt to derive from secondary sources you encountered in Phase 1:
+
+- **Signal 1 (service line count):** count distinct primary services mentioned in the prospect's GBP listing description, in directory listings (Yellowpages, Yelp, BBB), or in cached search-result snippets
+- **Signal 3 (service area count):** count distinct cities mentioned in the prospect's GBP service-area, directory location pages, or cached search-result snippets
+
+Mark a signal "unknown" only when no source — frontend or secondary — provides enough information to determine the count. The single-page-fallback default is conservative on purpose, but only when genuinely no signal data exists.
+
 **Emit:**
 - `recommended_page_mode: "multi"` and `page_mode_reasoning: "<count> service lines, <count> reviews, <count> cities, niche=<trade> → multi-page warranted"` if any **2 or more** signals fire.
 - `recommended_page_mode: "single"` and `page_mode_reasoning: "<count> service lines, <count> reviews, <count> cities, niche=<trade> → single-page sufficient"` if 0 or 1 signals fire.

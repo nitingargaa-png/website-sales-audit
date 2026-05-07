@@ -382,7 +382,7 @@ Production (after client signs):
 
 ---
 
-## TRIAGE_META Schema (v1.0)
+## TRIAGE_META Schema (v1.1)
 
 TRIAGE_META is the machine-readable sidecar footer that every website-sales-audit
 report ends with. It is the **contract** between the emitter
@@ -408,6 +408,10 @@ the last content in the audit file.
 | `mctb_applicable` | bool \| null | `true` if missed-call-text-back would meaningfully lift their phone/lead flow. |
 | `vaai_applicable` | bool \| null | `true` if a voice AI agent fits their call volume and after-hours pattern. |
 | `disqualifiers` | list of strings | Known disqualifiers detected. Empty list `[]` if none. |
+| `recommended_page_mode` | string \| null | Audit's recommendation: `"single"`, `"multi"`, or `null` if signals were too thin. Sales-internal — overridable at build time via `--page-mode` flag. Populated by SKILL.md Phase 2 (Wave 2). |
+| `page_mode_reasoning` | string \| null | One-line rationale for the recommendation. Sales-internal. Populated by SKILL.md Phase 2 (Wave 2). |
+| `estimated_monthly_leakage_usd` | int \| null | Estimated monthly $ value of leads lost. Sales-internal. **Asymmetric:** SKILL.md emits `null`; ghl-triage Step 7.5 populates (Wave 3). |
+| `has_before_after_content` | bool \| null | Whether the prospect's site has visible before/after content. Detected via Playwright (Wave 5, deferred). `null` for non-applicable trades. |
 
 Unknown fields are represented as `null` (not empty string, not omitted).
 
@@ -685,6 +689,54 @@ normally.
 
 Leave absent when the site loads with any genuine business content,
 even if the content is minimal.
+
+### `recommended_page_mode` — expanded definition (v1.1)
+
+The audit's structural recommendation: single-page or multi-page. Decided in Phase 2 from 4 signals — emit `"multi"` if any 2 fire, else `"single"`:
+
+1. Service line count ≥ 4
+2. GBP review count ≥ 100
+3. Service area count ≥ 3 distinct cities
+4. Trade has `prefers_multi_page: true` in its niche file
+
+If signals are too thin, emit `null`. Build-time resolver falls through to niche default, then `"single"` fallback.
+
+Sales-internal. Operator overrides at build time via `--page-mode {single,multi,auto}`.
+
+### `page_mode_reasoning` — expanded definition (v1.1)
+
+One-line rationale string. Format: `"[N] service lines, [N] reviews, [N] cities → [mode] recommended"`. Examples:
+- `"3 service lines, 47 reviews, 1 city → single-page sufficient"`
+- `"5 service lines, 142 reviews, 3 cities → multi-page warranted"`
+- `null` (when recommendation is null)
+
+### `estimated_monthly_leakage_usd` — expanded definition (v1.1)
+
+Estimated monthly $ value of leads currently being lost.
+
+**Asymmetric field:**
+- SKILL.md emits `null` in every audit. The audit does not compute this.
+- ghl-triage Step 7.5 populates the value during triage run. Deterministic Python formula. No LLM.
+
+Lands in: ghl-triage CSV `estimated_monthly_leakage_usd` column + Haiku talking points.
+Does NOT land in: prospect-facing Report B.
+
+Round to nearest $100. `null` when GBP review count unavailable.
+
+### `has_before_after_content` — expanded definition (v1.1)
+
+Whether the prospect's site has visible before/after content.
+
+**Detection method:** Playwright headless render (Wave 5, deferred). Applies only to: roofing, painting, landscaping, pressure washing, pest control, cleaning. All other trades: always `null`.
+
+**Heuristics** (any one fires → `true`):
+1. Class/id substring match: `before-after`, `ba-slider`, `twenty-twenty`, `compare-slider`, `before_after`, `ba-gallery`
+2. Heading text: `"before & after"` or `"before and after"` (case-insensitive)
+3. Image alt-text or filename pair: at least one image with `before` AND one with `after` on same page
+
+Detector ran, found nothing → `false`. Detector failed → `null`. Trade not applicable → `null`.
+
+Consumed by Layer 2.5 (audit-builder, Wave 7 deferred).
 
 ### Example
 

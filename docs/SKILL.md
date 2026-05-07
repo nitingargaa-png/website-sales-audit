@@ -1311,6 +1311,41 @@ table in the Domain Knowledge section above.]
 
 ---
 
+## PHASE 2 — ANALYZE & DECIDE
+
+After Phase 1 fetch and Domain Knowledge review, but before Report production, run analysis decisions that downstream tools consume via TRIAGE_META.
+
+### Page Mode Recommendation
+
+Decide whether the prospect's eventual rebuild should be a **single-page site** or a **multi-page site**. Emit the recommendation into TRIAGE_META `recommended_page_mode` and a one-line rationale into `page_mode_reasoning`.
+
+This is a **sales-internal** field. It does NOT appear in any of the four narrative reports. It surfaces only in build-time decisions in website-audit-builder (via the `--page-mode` flag) and in operator-facing talking points.
+
+**Decision is operator-overridable at build time.** The audit's job is recommendation; final call lives downstream.
+
+#### 4-signal resolver
+
+Tally how many of these fire for the prospect:
+
+1. **Service line count ≥ 4.** Count distinct primary services from Phase 1 (e.g. plumbing's typical lines: drain cleaning, water heaters, leak repair, sump pumps = 4). Sub-services within a primary line do NOT count separately.
+2. **GBP review count ≥ 100.** Sourced from Phase 1 GBP fetch. If review count is unknown or unfetchable, this signal does NOT fire (treat as zero, do not assume).
+3. **Service area count ≥ 3 distinct cities.** Sourced from Phase 1 service-area extraction. Cities listed on a "service area" page or in copy. Province/state-level coverage alone (e.g. "Greater Toronto Area") counts as 1.
+4. **Niche file has `## PAGE MODE PREFERENCE` set to `multi`.** Look at `docs/niches/<trade>.md` — if a `## PAGE MODE PREFERENCE` section exists with body `multi`, signal fires. If section absent or body is `single` or anything else, signal does NOT fire.
+
+**Emit:**
+- `recommended_page_mode: "multi"` and `page_mode_reasoning: "<count> service lines, <count> reviews, <count> cities, niche=<trade> → multi-page warranted"` if any **2 or more** signals fire.
+- `recommended_page_mode: "single"` and `page_mode_reasoning: "<count> service lines, <count> reviews, <count> cities, niche=<trade> → single-page sufficient"` if 0 or 1 signals fire.
+- `recommended_page_mode: null` and `page_mode_reasoning: null` if signals 1 OR 3 are unknown (cannot determine service line count or service area count). Signal 2's unknown-treated-as-zero is acceptable; signals 1 and 3 unknown means we lack the basis for a recommendation at all.
+
+**Reasoning string format examples:**
+- `"5 service lines, 142 reviews, 3 cities, niche=roofing → multi-page warranted"`
+- `"3 service lines, 47 reviews, 1 city, niche=plumbing → single-page sufficient"`
+- `null` (when recommendation is null)
+
+**Do not include the recommendation or reasoning in the narrative reports.** TRIAGE_META carries it. Operators who want to discuss it on calls can read it from the audit's TRIAGE_META block.
+
+---
+
 ## PHASE 3 — PRODUCE THE REPORTS
 
 **MANDATORY: Output ALL FOUR items below, in this exact order, every single time.**

@@ -5,6 +5,16 @@
 
 ---
 
+## PAGE MODE PREFERENCE
+# OPTIONAL. Body must be exactly "single" or "multi" (lowercase, single word) on its own line.
+# Read by website-audit-builder's resolve_page_mode() during --page-mode auto fallback.
+# Omit this section entirely if the trade has no preference — resolver falls to "single".
+# Real niche population is deferred to Wave 4 (per DELIBERATIONS); only update if
+# you have an empirical reason to prefer one mode for this trade.
+[single|multi — choose one, or omit this section entirely]
+
+---
+
 ## DETECTION KEYWORDS
 # Comma-separated words that identify this niche from scraped content
 [keyword1], [keyword2], [keyword3], [keyword4], [keyword5]

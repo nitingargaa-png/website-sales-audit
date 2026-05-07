@@ -300,3 +300,55 @@ Phase E correction to the ghl-triage entry point:
 Run all three fixtures; report any mismatch against this file. A
 follow-up commit updates either the fixture expected values, SKILL.md
 rules, or both — depending on what the diff reveals.
+
+---
+
+## v1.1 Fixture — Schema bump test (all v1.1 fields populated)
+
+**Profile:** Hypothetical roofer — multi-page recommended, before/after present.
+
+```triage-meta
+schema_version: "1.1"
+audit_generated_at: "2026-05-06T12:00:00Z"
+business_name: "Acme Roofing"
+business_url: "https://acmeroofing.example.com"
+trade: "roofing"
+ghl_upgrade_candidate: false
+mctb_applicable: true
+vaai_applicable: true
+disqualifiers: []
+recommended_page_mode: "multi"
+page_mode_reasoning: "5 service lines, 142 reviews, 3 cities → multi-page warranted"
+estimated_monthly_leakage_usd: null
+has_before_after_content: true
+```
+
+**Expected parse result:**
+- `recommended_page_mode == "multi"`
+- `page_mode_reasoning == "5 service lines, 142 reviews, 3 cities → multi-page warranted"`
+- `estimated_monthly_leakage_usd is None`
+- `has_before_after_content is True`
+
+---
+
+## v1.1 Fixture — Schema bump test (all v1.1 fields null)
+
+**Profile:** Hypothetical small plumber — recommendation thin.
+
+```triage-meta
+schema_version: "1.1"
+audit_generated_at: "2026-05-06T12:00:00Z"
+business_name: "Joe's Plumbing"
+business_url: "https://joesplumbing.example.com"
+trade: "plumbing"
+ghl_upgrade_candidate: false
+mctb_applicable: true
+vaai_applicable: false
+disqualifiers: []
+recommended_page_mode: null
+page_mode_reasoning: null
+estimated_monthly_leakage_usd: null
+has_before_after_content: null
+```
+
+**Expected parse result:** All four v1.1 fields parse as `None` without crash. v1.0 fields all extract correctly.

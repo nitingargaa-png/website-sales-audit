@@ -692,23 +692,41 @@ even if the content is minimal.
 
 ### `recommended_page_mode` — expanded definition (v1.1)
 
-The audit's structural recommendation: single-page or multi-page. Decided in Phase 2 from 4 signals — emit `"multi"` if any 2 fire, else `"single"`:
+The audit's structural recommendation: single-page or multi-page. Decided in SKILL.md Phase 2 from a 4-signal resolver:
 
-1. Service line count ≥ 4
-2. GBP review count ≥ 100
-3. Service area count ≥ 3 distinct cities
-4. Trade has `prefers_multi_page: true` in its niche file
+1. Service line count ≥ 4 (counted from Phase 1 service-line extraction)
+2. GBP review count ≥ 100 (from Phase 1 GBP fetch; unknown → does not fire)
+3. Service area count ≥ 3 distinct cities (from Phase 1 service-area extraction; province/state-level coverage counts as 1)
+4. Niche file `docs/niches/<trade>.md` has `## PAGE MODE PREFERENCE` section set to `multi`
 
-If signals are too thin, emit `null`. Build-time resolver falls through to niche default, then `"single"` fallback.
+Emit `"multi"` if 2+ signals fire, `"single"` if 0–1 fire, `null` if signals 1 or 3 are unknown (cannot determine).
 
-Sales-internal. Operator overrides at build time via `--page-mode {single,multi,auto}`.
+**Sales-internal field.** Does NOT appear in the four narrative reports. Surfaces only in:
+- TRIAGE_META block of the audit file
+- Build-time `--page-mode auto` resolution in website-audit-builder
+- Operator talking points (via ghl-triage)
+
+**Operator overridable.** Final call lives downstream — the build-time `--page-mode {single,multi,auto}` flag in `build_from_audit.py` either uses this recommendation (auto) or hard-overrides it.
+
+Resolution order in build:
+1. `--page-mode auto` (default): TRIAGE_META `recommended_page_mode` if non-null → niche `## PAGE MODE PREFERENCE` if present → `"single"` fallback
+2. `--page-mode single` | `--page-mode multi`: hard override, audit recommendation and niche default are ignored
 
 ### `page_mode_reasoning` — expanded definition (v1.1)
 
-One-line rationale string. Format: `"[N] service lines, [N] reviews, [N] cities → [mode] recommended"`. Examples:
-- `"3 service lines, 47 reviews, 1 city → single-page sufficient"`
-- `"5 service lines, 142 reviews, 3 cities → multi-page warranted"`
-- `null` (when recommendation is null)
+One-line human-readable rationale string. Format:
+`"<service-line-count> service lines, <review-count> reviews, <city-count> cities, niche=<trade> → <mode>-page <verdict>"`
+
+Examples:
+- `"5 service lines, 142 reviews, 3 cities, niche=roofing → multi-page warranted"`
+- `"3 service lines, 47 reviews, 1 city, niche=plumbing → single-page sufficient"`
+- `null` (when `recommended_page_mode` is null)
+
+The arrow character is the Unicode right-arrow `→` (U+2192). Some downstream consumers may render this as mojibake if their file encoding is wrong (see Wave 0 doc-drift item 5 — `wab/execution/parse_audit.py` cp1252 fallback bug). The string is parseable regardless; the rendering is the only issue.
+
+**Sales-internal field.** Mirrors the audience and surfacing rules of `recommended_page_mode`.
+
+**Null contract:** if `recommended_page_mode` is null, `page_mode_reasoning` MUST also be null. The two fields are emitted together.
 
 ### `estimated_monthly_leakage_usd` — expanded definition (v1.1)
 

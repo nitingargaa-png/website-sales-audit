@@ -46,6 +46,8 @@ from audit import judge                    # noqa: E402
 from audit import score as score_mod       # noqa: E402
 from audit import applicability            # noqa: E402
 from audit import render_md                # noqa: E402
+from audit.checkpoint import (           # noqa: E402
+    write_checkpoint, load_completed_urls)
 
 try:
     from audit import render_pdf
@@ -57,20 +59,6 @@ FETCH_TIMEOUT = 30
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "Chrome/121.0.0.0 Safari/537.36")
 SUBPAGES = ["/contact", "/contact-us", "/about", "/about-us", "/services"]
-
-
-# --- checkpoint: lifted verbatim from ghl-triage/triage/output.py -----------
-def write_checkpoint(path: str, url: str) -> None:
-    with open(path, "a", encoding="utf-8") as f:
-        f.write(url + "\n")
-        f.flush()
-
-
-def load_completed_urls(path: str) -> set:
-    if not os.path.exists(path):
-        return set()
-    with open(path, "r", encoding="utf-8") as f:
-        return {line.strip() for line in f if line.strip()}
 
 
 # --- io --------------------------------------------------------------------

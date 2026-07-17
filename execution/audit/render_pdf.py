@@ -17,8 +17,9 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import inch
 from reportlab.platypus import (SimpleDocTemplate, Paragraph, Spacer, Table,
-                               TableStyle)
+                               TableStyle, PageBreak)
 
+from . import checklist
 from .score import AREA_LABELS, BAND_LABEL
 
 NAVY = colors.HexColor("#1B2A4A")
@@ -39,6 +40,8 @@ def _styles(agency_name: str):
                               textColor=GREY, spaceAfter=10),
         "h": ParagraphStyle("h", parent=ss["Heading2"], fontSize=10.5,
                             textColor=NAVY, spaceBefore=9, spaceAfter=4),
+        "h2": ParagraphStyle("h2", parent=ss["Heading2"], fontSize=8.5,
+                             textColor=NAVY, spaceBefore=5, spaceAfter=2),
         "body": ParagraphStyle("b", parent=ss["Normal"], fontSize=8.8,
                                leading=11.5, spaceAfter=3),
         "small": ParagraphStyle("sm", parent=ss["Normal"], fontSize=7.2,
@@ -111,8 +114,12 @@ def render(path: str, url: str, m: Dict[str, Any], psi: Dict[str, Any],
 
     rows.append(["Secure connection", "Yes" if m["https"] else "No",
                  "Yes", "PASS" if m["https"] else "FAIL"])
-    rows.append(["Tap-to-call on phone", "Yes" if m["tel_href"] else "No",
-                 "Yes", "PASS" if m["tel_href"] else "FAIL"])
+    if m.get("tel_js_only"):
+        rows.append(["Tap-to-call on phone", "Only after scripts run",
+                     "Always", "FAIL"])
+    else:
+        rows.append(["Tap-to-call on phone", "Yes" if m["tel_href"] else "No",
+                     "Yes", "PASS" if m["tel_href"] else "FAIL"])
     if m.get("title_len"):
         rows.append(["Page title length", f"{m['title_len']} chars",
                      "55–60", "PASS" if m["title_ok"] else "FAIL"])
@@ -145,11 +152,20 @@ def render(path: str, url: str, m: Dict[str, Any], psi: Dict[str, Any],
 
     if psi.get("measured"):
         src = "real visitor data" if psi["source"] == "field" else "simulated test"
+        lcp = psi.get("lcp_s")
+        # Only boast about a range when there IS one. On 2026-07-16 the report
+        # said "Speed varies between tests, so we show the range" next to
+        # "25.0–25.0s" from 2 runs — one call had timed out and the other two
+        # agreed exactly. Claiming a range you aren't showing undercuts the
+        # credibility the sentence exists to build.
+        spread = (lcp[1] - lcp[0]) if lcp else 0
+        note = (" Speed varies between tests, so we show the range."
+                if spread >= 0.15 else "")
         el.append(Spacer(1, 3))
         el.append(Paragraph(
             f"Source: Google PageSpeed Insights · {src} · "
-            f"{psi['runs_ok']} runs · {dt.date.today().isoformat()}. "
-            f"Speed varies between tests, so we show the range.", st["small"]))
+            f"{psi['runs_ok']} run{'s' if psi['runs_ok'] != 1 else ''} · "
+            f"{dt.date.today().isoformat()}.{note}", st["small"]))
 
     # --- findings ---
     if judged and judged.get("top_findings"):
@@ -171,6 +187,59 @@ def render(path: str, url: str, m: Dict[str, Any], psi: Dict[str, Any],
     el.append(Paragraph(
         f"<font color='#6B7280'>Prepared by {agency_name}"
         + (f" · {agency_contact}" if agency_contact else "") + "</font>",
+        st["small"]))
+
+    # ================= PAGE 2 — everything we checked =====================
+    # Page 1 is the pitch (practitioner advice: "a one-page summary beats a
+    # 20-page report every time"). Page 2 is the evidence you point at when
+    # the owner asks "how did you get 1/5?". Deliberately separate.
+    cl = checklist.build(m, psi, verdicts)
+    el.append(PageBreak())
+    el.append(Paragraph("Everything we checked", st["title"]))
+    el.append(Paragraph(
+        f"{name} · {url}", st["sub"]))
+
+    mark_style = {
+        checklist.PASS: (GREEN, "PASS"),
+        checklist.FAIL: (RED, "NEEDS WORK"),
+        checklist.WARN: (AMBER, "CHECK"),
+        checklist.NOT_CHECKED: (GREY, "NOT CHECKED"),
+    }
+
+    for title, key in checklist.GROUPS:
+        items = cl.get(key, [])
+        if not items:
+            continue
+        p, f, n = checklist.counts(items)
+        el.append(Paragraph(
+            f"{title} <font size=6.5 color='#6B7280'>"
+            f"({p} passed · {f} need work · {n} not checked)</font>", st["h2"]))
+
+        rows = []
+        for label, status, detail in items:
+            colr, word = mark_style.get(status, (GREY, status))
+            txt = label
+            if detail:
+                txt += f" <font size=6.5 color='#6B7280'>— {detail}</font>"
+            rows.append([Paragraph(txt, st["body"]),
+                         Paragraph(f"<font color='#{colr.hexval()[2:]}'>"
+                                   f"<b>{word}</b></font>", st["small"])])
+        t = Table(rows, colWidths=[5.15 * inch, 1.05 * inch])
+        t.setStyle(TableStyle([
+            ("FONTSIZE", (0, 0), (-1, -1), 7),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
+            ("LINEBELOW", (0, 0), (-1, -2), 0.25,
+             colors.HexColor("#F0F0F0")),
+        ]))
+        el.append(t)
+
+    el.append(Spacer(1, 4))
+    el.append(Paragraph(
+        "<b>NOT CHECKED</b> means we could not judge it from outside your "
+        "website. Button sizes, photo quality, and overall look need a person "
+        "to open the site on a real phone — we have not guessed at them.",
         st["small"]))
 
     doc.build(el)

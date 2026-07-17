@@ -10,6 +10,7 @@ See docs/fixtures_golden.md — Fixtures 1/2/3 pin the six diffable fields.
 import datetime as dt
 from typing import Dict, Any, Optional, List
 
+from . import checklist
 from .score import AREA_LABELS, BAND_LABEL, WEIGHTS, disclosure_level
 
 RULE = "━" * 50
@@ -47,7 +48,11 @@ def _measured_block(m: Dict[str, Any], psi: Dict[str, Any],
         lines.append("Loading (mobile):  not measured — data unavailable")
 
     lines.append(f"Secure (https):    {'YES' if m['https'] else 'NO'}")
-    lines.append(f"Tap-to-call:       {'YES' if m['tel_href'] else 'NO'}")
+    if m.get("tel_js_only"):
+        lines.append("Tap-to-call:       YES, but only after scripts run "
+                     "— not present in the page as delivered")
+    else:
+        lines.append(f"Tap-to-call:       {'YES' if m['tel_href'] else 'NO'}")
     if m.get("title_len"):
         lines.append(f"Page title:        {m['title_len']} chars · target 55–60")
     else:
@@ -59,9 +64,14 @@ def _measured_block(m: Dict[str, Any], psi: Dict[str, Any],
     if psi.get("measured"):
         src = "field data (real visitors)" if psi["source"] == "field" \
             else "lab data (simulated)"
+        lcp = psi.get("lcp_s")
+        spread = (lcp[1] - lcp[0]) if lcp else 0
+        note = " · runs agreed closely" if spread < 0.15 else \
+               " · speed varies between tests, range shown"
         lines.append(
             f"[Source: Google PageSpeed Insights, {src}, "
-            f"{psi['runs_ok']} runs, {dt.date.today().isoformat()}]")
+            f"{psi['runs_ok']} run{'s' if psi['runs_ok'] != 1 else ''}, "
+            f"{dt.date.today().isoformat()}{note}]")
     return "\n".join(lines)
 
 
@@ -73,16 +83,32 @@ def _area_table(sc: Dict[str, Any]) -> str:
     return " · ".join(parts)
 
 
-def _full_rubric_table(sc: Dict[str, Any]) -> str:
-    rows = ["| Area | Score | Weight | Contribution |", "|---|---|---|---|"]
+# Map score areas -> checklist groups. lead_capture has no group of its own;
+# its checks live under Conversion basics.
+_AREA_TO_GROUP = {
+    "speed": "speed", "mobile": "mobile", "conversion": "conversion",
+    "seo_local": "seo_local", "trust": "trust", "lead_capture": "conversion",
+}
+
+
+def _full_rubric_table(sc: Dict[str, Any], cl: Dict[str, Any]) -> str:
+    """
+    (b) — every area score carries a reason naming what failed.
+
+    "Being found 1/5" tells the owner nothing. "Being found 1/5 — page title;
+    search result description; content readable without scripts running" tells
+    him what to ask his web person about.
+    """
+    rows = ["| Area | Score | Weight | Why |", "|---|---|---|---|"]
     for k, label in AREA_LABELS.items():
         v = sc["elements"].get(k)
         w = WEIGHTS[k]
+        items = cl.get(_AREA_TO_GROUP.get(k, ""), [])
+        why = checklist.reason_line(k, items) if items else "—"
         if v is None:
-            rows.append(f"| {label} | not measured | {int(w*100)}% | — |")
+            rows.append(f"| {label} | not measured | {int(w*100)}% | {why} |")
         else:
-            rows.append(
-                f"| {label} | {v}/5 | {int(w*100)}% | {v * w * 4:.1f} |")
+            rows.append(f"| {label} | {v}/5 | {int(w*100)}% | {why} |")
     return "\n".join(rows)
 
 
@@ -115,9 +141,32 @@ def render(url: str, m: Dict[str, Any], psi: Dict[str, Any],
             out.append(f"   → {f.get('impact','')}")
             out.append(f"   → Fix: {f.get('fix','')}")
             out.append("")
+    elif m.get("js_only_suspected"):
+        # The judge refused because there was nothing to judge. That refusal
+        # IS the finding — and it is the strongest one available.
+        out.append("THE BIGGEST ISSUE")
+        out.append(
+            f"1. Your website's content is built by JavaScript in the "
+            f"visitor's browser. When we loaded your homepage the way Google "
+            f"loads it, we got {m.get('visible_text_len', 0)} characters of "
+            f"text — no services, no phone number, no reviews.")
+        out.append(
+            "   → Google reads your site the same way we just did. Anything "
+            "that isn't in the page when it first loads is at risk of not "
+            "being read at all. That affects whether you show up when "
+            "someone searches for your trade in your city.")
+        out.append(
+            "   → Fix: The site needs to send real content in the page "
+            "itself, not build it afterwards. That normally means a rebuild "
+            "on a setup that sends finished pages.")
+        out.append("")
+        out.append(
+            "We have not scored the parts of your site we could not see. "
+            "The numbers above are the ones we could measure directly.")
+        out.append("")
     else:
         out.append("THE THREE THINGS COSTING YOU MOST")
-        out.append("[judged tier unavailable — measured findings only]")
+        out.append("[not available — content could not be read]")
         out.append("")
 
     if judged and judged.get("working"):
@@ -133,9 +182,11 @@ def render(url: str, m: Dict[str, Any], psi: Dict[str, Any],
 
     # Score disclosure keyed by band — preserved from v12 W3 close.
     level = disclosure_level(band_name)
+    cl = checklist.build(m, psi, verdicts)
+
     if level == "full":
         out.append("AREA SCORES")
-        out.append(_full_rubric_table(sc))
+        out.append(_full_rubric_table(sc, cl))
     elif level == "line":
         out.append("AREA SCORES")
         out.append(_area_table(sc))
@@ -148,6 +199,28 @@ def render(url: str, m: Dict[str, Any], psi: Dict[str, Any],
 
     out.append("WANT TO SEE WHAT'S POSSIBLE?")
     out.append("I can put together a quick sketch of what this could look like.")
+    out.append(RULE)
+    out.append("")
+
+    # ---- full checklist -------------------------------------------------
+    out.append("EVERYTHING WE CHECKED")
+    out.append("")
+    for title, key in checklist.GROUPS:
+        items = cl.get(key, [])
+        if not items:
+            continue
+        p, f, n = checklist.counts(items)
+        out.append(f"{title}  ({p} passed · {f} need work · {n} not checked)")
+        for label, status, detail in items:
+            mark = {"PASS": "  ✅", "FAIL": "  ❌",
+                    "WARN": "  ⚠️ ", "NOT CHECKED": "  ➖"}.get(status, "  ·")
+            line = f"{mark} {label}"
+            if detail:
+                line += f" — {detail}"
+            out.append(line)
+        out.append("")
+    out.append("➖ means we could not check it from outside your website "
+               "without looking at it on a real phone.")
     out.append(RULE)
     out.append("")
     out.append("```triage-meta")

@@ -70,16 +70,27 @@ def score_seo_local(m: Dict[str, Any]) -> int:
 
 def score_trust(m: Dict[str, Any], judged: Optional[int] = None) -> int:
     """
-    Judged, with one hard measured anchor.
+    Judged, with hard measured anchors.
 
-    Automatic <=2: Google badge present but zero review count shown.
-    That is 'hidden social proof' — they earned the reviews and the site
-    hides them. It is the single most winnable fix in the audit and it
-    should never score well.
+    Automatic <=2: social proof exists but the visitor cannot see how much.
+
+    Three shapes of this, all confirmed real:
+      - Google badge present, no count anywhere -> the badge implies reviews
+        exist and tells the visitor nothing about how many.
+      - JSON-LD aggregateRating present, count not rendered on the page.
+      - Count only appears after JavaScript runs, so a crawler never sees it.
+
+    Confirmed 2026-07-16 on mississaugaplumbingservices.com: homepage shows a
+    "Google Reviews" badge, five gold stars, one testimonial, and no number.
+    Google's panel shows 4.8 from 266 reviews. The business earned 266 reviews
+    and its homepage displays none of that. Most winnable fix in the audit —
+    it must never score above 2.
     """
-    if m["google_badge"] and not m["review_count_visible"]:
+    if m.get("google_badge") and not m.get("review_count_visible"):
         return min(judged or 2, 2)
-    if m["aggregate_review_count"] and not m["review_count_visible"]:
+    if m.get("aggregate_review_count") and not m.get("review_count_visible"):
+        return min(judged or 2, 2)
+    if m.get("review_count_after_js") and not m.get("review_count_visible"):
         return min(judged or 2, 2)
     return judged if judged is not None else 3
 
@@ -129,7 +140,8 @@ def score_lead_capture(m: Dict[str, Any], judged: Optional[int] = None) -> int:
 
 
 def compute(measured: Dict[str, Any], psi: Dict[str, Any],
-            judged: Dict[str, int]) -> Dict[str, Any]:
+            judged: Dict[str, int],
+            judge_available: bool = True) -> Dict[str, Any]:
     """
     Six element scores -> site_score.
 
@@ -138,20 +150,43 @@ def compute(measured: Dict[str, Any], psi: Dict[str, Any],
     every site where PSI failed. Since PSI was optional in v12, that was
     potentially most sites. Here, a None area is EXCLUDED and the weights are
     renormalised over what we actually measured — and the report says so.
+
+    judge_available=False means the judged tier refused (invisible content).
+    In that case the JUDGED areas score None too — we did not see the site, so
+    we cannot rate its design or trust. Scoring them 1/5 would be pretending we
+    looked. Only the measured areas survive.
+
+    Observed 2026-07-16: a JS-shell site scored 4/100 with every area at 1/5,
+    including "Trust 1/5" on a business with 166 five-star reviews we simply
+    could not see. That number was theatre.
     """
-    elements: Dict[str, Optional[int]] = {
-        "speed": psi_mod.element_score(psi),
-        "mobile": score_mobile(measured, psi, judged.get("mobile")),
-        "conversion": score_conversion(measured, judged.get("conversion")),
-        "seo_local": score_seo_local(measured),
-        "trust": score_trust(measured, judged.get("trust")),
-        "lead_capture": score_lead_capture(measured, judged.get("lead_capture")),
-    }
+    speed = psi_mod.element_score(psi)
+
+    if judge_available:
+        elements: Dict[str, Optional[int]] = {
+            "speed": speed,
+            "mobile": score_mobile(measured, psi, judged.get("mobile")),
+            "conversion": score_conversion(measured, judged.get("conversion")),
+            "seo_local": score_seo_local(measured),
+            "trust": score_trust(measured, judged.get("trust")),
+            "lead_capture": score_lead_capture(measured, judged.get("lead_capture")),
+        }
+    else:
+        # Only what we can determine from bytes alone.
+        elements = {
+            "speed": speed,
+            "mobile": _mobile_measured_only(measured, psi),
+            "conversion": None,
+            "seo_local": score_seo_local(measured),
+            "trust": None,
+            "lead_capture": None,
+        }
 
     scored = {k: v for k, v in elements.items() if v is not None}
     if not scored:
         return {"elements": elements, "site_score": None, "band": None,
-                "unscored": list(elements.keys()), "renormalised": False}
+                "unscored": list(elements.keys()), "renormalised": False,
+                "weight_covered": 0}
 
     total_weight = sum(WEIGHTS[k] for k in scored)
     raw = sum(v * WEIGHTS[k] * 4 for k, v in scored.items())
@@ -168,6 +203,18 @@ def compute(measured: Dict[str, Any], psi: Dict[str, Any],
         "renormalised": bool(unscored),
         "weight_covered": round(total_weight * 100),
     }
+
+
+def _mobile_measured_only(m: Dict[str, Any], psi: Dict[str, Any]) -> Optional[int]:
+    """Mobile from measured signals alone — viewport, tap-to-call, CLS."""
+    pts = 0
+    if m.get("viewport_meta"):
+        pts += 1
+    if m.get("tel_href"):
+        pts += 2
+    if psi.get("measured") and psi.get("cls") and psi["cls"][1] < 0.1:
+        pts += 1
+    return {0: 1, 1: 2, 2: 3, 3: 4, 4: 5}.get(pts, 3)
 
 
 def band(score: Optional[int]) -> Optional[str]:

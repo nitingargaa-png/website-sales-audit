@@ -20,6 +20,7 @@ import requests
 PSI_ENDPOINT = "https://www.googleapis.com/pagespeedonline/v5/runPagespeed"
 TIMEOUT_SECS = 60
 RETRY_DELAY_SECS = 2.0
+RATE_LIMIT_ATTEMPTS = 3
 DEFAULT_RUNS = 3
 
 # Google Core Web Vitals thresholds. These are the citable numbers.
@@ -34,7 +35,13 @@ def _api_key() -> Optional[str]:
 
 
 def _single_run(url: str, strategy: str = "mobile") -> Optional[Dict[str, Any]]:
-    """One PSI call. Returns raw JSON or None on failure."""
+    """
+    One PSI call, with backoff on 429.
+
+    Without an API key PSI allows only a handful of requests per minute per IP.
+    With a free key it is 25,000/day. If you are batching, get a key:
+    https://developers.google.com/speed/docs/insights/v5/get-started
+    """
     params = {
         "url": url,
         "strategy": strategy,
@@ -44,15 +51,41 @@ def _single_run(url: str, strategy: str = "mobile") -> Optional[Dict[str, Any]]:
     if key:
         params["key"] = key
 
-    try:
-        resp = requests.get(PSI_ENDPOINT, params=params, timeout=TIMEOUT_SECS)
-        if resp.status_code != 200:
-            print(f"  [psi] HTTP {resp.status_code} for {url}")
+    backoff = 4.0
+    for attempt in range(1, RATE_LIMIT_ATTEMPTS + 1):
+        try:
+            resp = requests.get(PSI_ENDPOINT, params=params, timeout=TIMEOUT_SECS)
+            if resp.status_code == 429:
+                if attempt < RATE_LIMIT_ATTEMPTS:
+                    print(f"  [psi] rate limited (429), waiting {backoff:.0f}s")
+                    time.sleep(backoff)
+                    backoff *= 2
+                    continue
+                print("  [psi] rate limited (429) after retries."
+                      + ("" if key else
+                         " Set PSI_API_KEY in .env — without a key PSI allows"
+                         " only a few requests per minute per IP."))
+                return None
+            if resp.status_code != 200:
+                print(f"  [psi] HTTP {resp.status_code} for {url}")
+                return None
+            return resp.json()
+        except requests.exceptions.Timeout:
+            # PSI is slow on heavy sites; a 60s timeout is not unusual and is
+            # worth one retry. Observed 2026-07-16: 1 of 3 runs timed out,
+            # leaving a "range" of 25.0-25.0s from the two that survived.
+            if attempt < RATE_LIMIT_ATTEMPTS:
+                print(f"  [psi] timed out, retrying ({attempt}/"
+                      f"{RATE_LIMIT_ATTEMPTS})")
+                time.sleep(backoff)
+                backoff *= 2
+                continue
+            print("  [psi] timed out after retries")
             return None
-        return resp.json()
-    except Exception as e:
-        print(f"  [psi] request failed: {e}")
-        return None
+        except Exception as e:
+            print(f"  [psi] request failed: {e}")
+            return None
+    return None
 
 
 def _extract_field(payload: Dict[str, Any]) -> Optional[Dict[str, float]]:

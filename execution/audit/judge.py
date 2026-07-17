@@ -26,6 +26,20 @@ RETRY_DELAY_SECS = 2.0
 MAX_ATTEMPTS = 2
 MAX_HTML_CHARS = 60000
 
+# REFUSAL THRESHOLD.
+#
+# Below this many characters of visible text, the model has nothing real to
+# judge and will pattern-match instead. Observed 2026-07-16 on the first live
+# run: handed 83 chars from a JS shell, the model reported "The homepage shows
+# a 404 'Page Not Found' error" on a site that returned HTTP 200 with 17KB of
+# HTML. It saw the string "Page Not Found" in a pre-hydration React component
+# and built three findings, an overview, and a fix plan on top of it. The
+# report told a working plumbing business to call their host about a broken
+# homepage.
+#
+# A refusal is honest. A fabricated 404 in a prospect's inbox is not.
+MIN_TEXT_FOR_JUDGMENT = 400
+
 SYSTEM_PROMPT = """You are auditing a local home service business website for its owner.
 
 You are given: (1) the page text, (2) a dict of MEASURED facts already
@@ -43,6 +57,52 @@ SEO, CTA, UX, schema markup, meta tags, H1, above the fold, conversion rate,
 bounce rate, responsive design, optimize, leverage, streamline, boost, enhance,
 seamless, robust, comprehensive, unlock, transform, elevate, game-changer,
 cutting-edge, actionable, holistic, journey, funnel, KPI, indexing, SSL.
+
+NEVER QUOTE THE MEASURED DICT AT THE OWNER.
+The MEASURED facts are given to you as a JSON dict with field names like
+tel_href, localbusiness_jsonld, js_only_suspected, aggregate_review_count.
+Those are internal variable names. The owner has never seen them and they mean
+nothing to him.
+
+FORBIDDEN: "the measured fact 'tel_href: false' means it is not a phone link"
+CORRECT:   "Your phone number is written as plain text, so it can't be tapped
+            to call on a phone."
+
+Never write a field name, a JSON key, a colon-value pair, or the word
+"measured fact" in owner-facing prose. Describe what is true in plain words.
+
+NO CODE IN FIXES. Do not write HTML tags, angle brackets, or code snippets —
+the report renders to PDF and tags get stripped, leaving nonsense. Say "ask
+your web person to make the number a tap-to-call link", not "<a href=...>".
+
+DO NOT INVENT DETAILS ABOUT THE TEST ITSELF.
+The number of PageSpeed runs is in the data you were given. Do not say "across
+two runs" when it says three. If you are unsure, don't mention it.
+
+DO NOT INVENT COMPETITOR NUMBERS.
+"a competitor showing 4.8 stars and 150 reviews" is a fabricated benchmark.
+You have no competitor data. Say "most established plumbers in a market this
+size show their rating and review count" — a general pattern, no fake figures.
+
+DO NOT OPINE ON REBUILD VS REPAIR.
+Never write "without rebuilding the site from scratch" or "this needs a full
+rebuild". That is a sales conversation, not an audit finding. Report what is
+broken and what fixing it involves. The reader decides the scope.
+
+TAP-TO-CALL: READ tel_js_only BEFORE PRAISING THE PHONE LINK.
+The page text you are given comes from a renderer that executed the site's
+JavaScript. A phone number may appear as a working link there and still not
+exist in the page as delivered.
+
+If tel_js_only is true: the tap-to-call link is NOT working properly. Do not
+list it under "working". It only exists after scripts finish, which on a slow
+site means it is missing for the first several seconds, and search engines
+never see it at all. Treat it as a problem, not a positive.
+
+If tel_href is true: the link is in the page as delivered. Safe to praise.
+
+Never contradict the MEASURED block. If it says tap-to-call only works after
+scripts run, do not write that the phone number is a working tap-to-call link.
 
 NO HYPE. "Could help get more calls." Never "will transform your business."
 
@@ -170,19 +230,99 @@ def _parse_json(raw: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+# Internal field names that must never reach a prospect. A prompt rule is a
+# guideline; this is the mechanism. Your own repo's lesson, learned on
+# commit-message escaping: "Mechanisms beat guidelines under execution
+# pressure." The model leaked "the measured fact 'tel_href: false'" into a
+# prospect-facing finding on the 2026-07-16 live run despite the voice rules.
+LEAK_PATTERNS = [
+    r"\btel_href\b", r"\blocalbusiness_jsonld\b", r"\bjs_only_suspected\b",
+    r"\baggregate_review_count\b", r"\breview_count_visible\b",
+    r"\bvisible_text_len\b", r"\bviewport_meta\b", r"\bphone_in_text\b",
+    r"\bmeta_desc_ok\b", r"\btitle_ok\b", r"\bbooking_tier\b",
+    r"\bgmail_contact\b", r"\bscript_count\b", r"\bfsm_vendor\b",
+    r"\bchat_vendor\b", r"\bad_pixels\b", r"\bplaceholder_signals\b",
+    r"measured fact", r"<a\s+href", r"</\w+>",
+]
+
+PROSE_FIELDS = ("evidence", "impact", "fix")
+
+
+def _leaks(judged: Dict[str, Any]) -> list:
+    """Return list of (where, pattern) for any internal name in owner prose."""
+    found = []
+    blobs = []
+    for f in judged.get("top_findings", []) or []:
+        for k in PROSE_FIELDS:
+            if f.get(k):
+                blobs.append((f"finding.{k}", f[k]))
+    for k in ("overview", "hook"):
+        if judged.get(k):
+            blobs.append((k, judged[k]))
+    for w in judged.get("working", []) or []:
+        blobs.append(("working", w))
+
+    for where, txt in blobs:
+        for pat in LEAK_PATTERNS:
+            if re.search(pat, txt, re.I):
+                found.append((where, pat))
+    return found
+
+
+def _strip_contradictions(judged: Dict[str, Any],
+                          measured: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    MECHANISM, not guideline.
+
+    The judged tier reads renderer output, where a JS-injected tel: link looks
+    like a working tap-to-call. The MEASURED block reads the delivered HTML,
+    where it does not exist. On the 2026-07-16 run the report said, two inches
+    apart:
+
+        MEASURED  Tap-to-call: YES, but only after scripts run
+        WORKING   "Your phone number appears as a tap-to-call link in the
+                   footer, making it easy to dial from a phone"
+
+    A prospect who spots that stops trusting the document. The prompt now warns
+    about it; this drops it if the warning doesn't hold.
+    """
+    if not judged or not measured.get("tel_js_only"):
+        return judged
+
+    tap_praise = re.compile(
+        r"tap[- ]to[- ]call|click[- ]to[- ]call|tap the (number|phone)"
+        r"|dial (directly|straight)|phone number.{0,40}link", re.I)
+
+    working = judged.get("working") or []
+    kept = [w for w in working if not tap_praise.search(w)]
+    if len(kept) != len(working):
+        print("  [judge] dropped tap-to-call praise — contradicts MEASURED "
+              "(link only exists after scripts run)")
+        judged["working"] = kept
+    return judged
+
+
 def assess(page_text: str, measured: Dict[str, Any],
            psi: Dict[str, Any], url: str) -> Optional[Dict[str, Any]]:
     """
     Returns judged scores + findings, or None on failure.
 
+    REFUSAL GUARD — see MIN_TEXT_FOR_JUDGMENT.
+
     None is handled by the caller: the audit still emits with measured-only
     scoring and a note. A failed judge call degrades the report; it does not
     fabricate one.
     """
+    if len(page_text.strip()) < MIN_TEXT_FOR_JUDGMENT:
+        print(f"  [judge] REFUSING — only {len(page_text.strip())} chars of "
+              f"visible text (need {MIN_TEXT_FOR_JUDGMENT}). Judging this "
+              f"would be fabrication.")
+        return None
+
     # Strip the measured dict of raw text fields before sending — the model
     # doesn't need them and they eat tokens.
     slim = {k: v for k, v in measured.items()
-            if k not in ("title", "meta_desc")}
+            if k not in ("title", "meta_desc", "h1_text")}
 
     prompt = f"""URL: {url}
 
@@ -199,4 +339,38 @@ PAGE TEXT:
     raw = _invoke(prompt)
     if not raw:
         return None
-    return _parse_json(raw)
+    parsed = _parse_json(raw)
+    if not parsed:
+        return None
+
+    # Mechanism, not guideline: reject and retry once if internal field names
+    # leaked into owner-facing prose.
+    parsed = _strip_contradictions(parsed, measured)
+
+    leaks = _leaks(parsed)
+    if leaks:
+        where = ", ".join(f"{w} ({p})" for w, p in leaks[:3])
+        print(f"  [judge] leak detected in owner prose: {where} — retrying")
+        retry = _invoke(
+            prompt + "\n\nYOUR PREVIOUS ATTEMPT LEAKED INTERNAL FIELD NAMES "
+                     "OR CODE INTO OWNER-FACING TEXT. The owner has never seen "
+                     "the MEASURED dict and does not know what its keys mean. "
+                     "Rewrite every finding in plain words a plumber would use. "
+                     "No field names, no JSON keys, no 'measured fact', no HTML "
+                     "tags.")
+        if retry:
+            reparsed = _parse_json(retry)
+            if reparsed and not _leaks(reparsed):
+                return _strip_contradictions(reparsed, measured)
+            if reparsed:
+                print("  [judge] leak persisted after retry — dropping affected "
+                      "findings rather than sending them")
+                reparsed["top_findings"] = [
+                    f for f in (reparsed.get("top_findings") or [])
+                    if not any(re.search(p, " ".join(
+                        str(f.get(k, "")) for k in PROSE_FIELDS), re.I)
+                        for p in LEAK_PATTERNS)]
+                return reparsed
+        return None
+
+    return parsed

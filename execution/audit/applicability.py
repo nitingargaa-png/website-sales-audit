@@ -160,9 +160,28 @@ def disqualifiers(m: Dict[str, Any], text: str,
     if _is_out_of_area(url, region, low):
         out.append("out_of_service_area")
 
-    # dead_site
+    # dead_site — the homepage genuinely has nothing.
+    #
+    # CAREFUL: a JS-rendered site returns a near-empty shell to a static fetch.
+    # That is NOT a dead site — it is a live business with a rendering problem,
+    # and it is often the BEST rebuild prospect (js_only_suspected drives
+    # seo_local to 1-2 on its own).
+    #
+    # Only call it dead when there is no text AND no structural evidence of a
+    # real site: no title, no scripts to render it, no schema, no phone.
+    # Bug caught on first live run against mississaugaplumbingservices.com,
+    # a JS-only build that this rule wrongly marked dead_site — which would
+    # have silently dropped the best prospect in the list from every batch.
     if m.get("visible_text_len", 0) < 100:
-        out.append("dead_site")
+        has_structure = any([
+            m.get("title"),
+            m.get("localbusiness_jsonld"),
+            m.get("phone_in_text"),
+            m.get("platform"),
+            m.get("script_count", 0) >= 3,
+        ])
+        if not has_structure:
+            out.append("dead_site")
 
     return out
 

@@ -40,6 +40,9 @@ if hasattr(sys.stderr, "reconfigure"):
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
+from dotenv import load_dotenv            # noqa: E402
+load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
+
 from audit import psi as psi_mod          # noqa: E402
 from audit import detect                   # noqa: E402
 from audit import judge                    # noqa: E402

@@ -24,9 +24,6 @@ __pycache__/
 .vscode/
 .cache/
 .claude/
-
-
 sourcing_cache/
 sourcing_output/
 
-output/

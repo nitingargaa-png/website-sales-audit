@@ -44,6 +44,7 @@ from dotenv import load_dotenv            # noqa: E402
 load_dotenv(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env"))
 
 from audit import psi as psi_mod          # noqa: E402
+from audit import render                  # noqa: E402
 from audit import detect                   # noqa: E402
 from audit import judge                    # noqa: E402
 from audit import score as score_mod       # noqa: E402
@@ -102,44 +103,42 @@ def load_urls(path: str) -> List[str]:
     return urls
 
 
-def fetch(url: str) -> Optional[str]:
-    try:
-        r = requests.get(url, timeout=FETCH_TIMEOUT,
-                         headers={"User-Agent": UA})
-        if r.status_code != 200:
-            print(f"  [fetch] HTTP {r.status_code}")
-            return None
-        return r.text
-    except Exception as e:
-        print(f"  [fetch] {e}")
-        return None
-
-
-def fetch_all(url: str) -> Optional[str]:
-    """Homepage is required. Subpages are additive; missing ones are noted."""
-    home = fetch(url)
-    if not home:
-        return None
-    combined = home
-    for sp in SUBPAGES:
-        h = fetch(url + sp)
-        if h:
-            combined += "\n" + h
-    return combined
-
-
 # --- pipeline --------------------------------------------------------------
 def audit_one(url: str, outdir: str, want_pdf: bool,
               agency: str, contact: str) -> Optional[Dict[str, Any]]:
     print(f"\n=== {url}")
 
-    html = fetch_all(url)
-    if html is None:
-        print("  ABORT: site would not load. Not audited.")
+    r = render.fetch(url)
+    if r["html"] is None:
+        print("  ABORT: homepage would not load. Not audited.")
         return None
 
+    html = r["html"]
+    # Subpages add context but are never required. A 404 on /about is normal.
+    found = []
+    for sp in SUBPAGES:
+        h = render.fetch_static(url + sp, quiet=True)
+        if h:
+            html += "\n" + h
+            found.append(sp)
+    print(f"  [fetch] homepage OK ({len(r['html'])} bytes)"
+          + (f", subpages: {', '.join(found)}" if found else ", no subpages"))
+
     print("  [1/5] detecting…")
-    m = detect.scan(html, url)
+    # Rendered text feeds TEXT-derived signals (phone, reviews, franchise
+    # language). Tag-derived signals still come from raw html.
+    m = detect.scan(html, url, rendered_text=r["text"] if r["js_rendered"] else None)
+
+    # Prefer rendered text for judging; fall back to what static could see.
+    text = r["text"] or detect._strip_tags(html)
+    if r["js_rendered"]:
+        print(f"        JS-rendered site — content recovered via "
+              f"{r['text_source']} ({r['rendered_text_len']} chars vs "
+              f"{r['static_text_len']} static)")
+    elif m["js_only_suspected"]:
+        print(f"        JS-rendered shell — only {m['visible_text_len']} chars "
+              f"visible, {m['script_count']} scripts, and NO renderer "
+              f"available. Content is invisible to us AND to Google.")
 
     print(f"  [2/5] PageSpeed ({psi_mod.DEFAULT_RUNS} runs)…")
     p = psi_mod.run(url, runs=psi_mod.DEFAULT_RUNS)
@@ -149,19 +148,25 @@ def audit_one(url: str, outdir: str, want_pdf: bool,
         print(f"        LCP {lcp[0]:.1f}-{lcp[1]:.1f}s ({p['source']}) "
               f"-> {v['lcp']}" if lcp else "        no LCP")
     else:
-        print("        NOT MEASURED — Speed will score null")
+        print("        NOT MEASURED — Speed scores null, excluded from total")
 
     print("  [3/5] judging…")
-    text = detect._strip_tags(html)
     j = judge.assess(text, m, p, url)
     if j is None:
-        print("        judged tier failed — degrading to measured-only")
+        print("        no judged tier — report will be measured-only")
+    else:
+        print(f"        {len(j.get('top_findings', []))} findings, "
+              f"trade={j.get('trade')}")
 
     print("  [4/5] scoring…")
     judged_scores = (j or {}).get("judged", {})
-    sc = score_mod.compute(m, p, judged_scores)
-    print(f"        {sc['site_score']}/100 ({sc['band']})"
-          if sc["site_score"] is not None else "        not scored")
+    sc = score_mod.compute(m, p, judged_scores, judge_available=j is not None)
+    if sc["site_score"] is not None:
+        cov = sc.get("weight_covered", 100)
+        print(f"        {sc['site_score']}/100 ({sc['band']})"
+              + (f" — {cov}% of weight measured" if cov < 100 else ""))
+    else:
+        print("        not scored — nothing measurable")
 
     ghl_up, mctb, vaai, dq = applicability.evaluate(m, text, j, url)
     if dq:

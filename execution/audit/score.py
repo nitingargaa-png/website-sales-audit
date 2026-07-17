@@ -189,7 +189,7 @@ def compute(measured: Dict[str, Any], psi: Dict[str, Any],
                 "weight_covered": 0}
 
     total_weight = sum(WEIGHTS[k] for k in scored)
-    raw = sum(v * WEIGHTS[k] * 4 for k, v in scored.items())
+    raw = sum(v * WEIGHTS[k] * 20 for k, v in scored.items())
     # Renormalise so a missing area doesn't silently drag the score down.
     site_score = round(raw / total_weight * 1.0) if total_weight else None
 

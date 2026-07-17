@@ -1,0 +1,6 @@
+{
+  "_comment": "GTA grid. Non-adjacent cities on purpose: Mississauga x Brampton are both Peel and share operators, so multi_location_domain fires on service-area overlap and means nothing. Hamilton makes a shared-domain hit real. See sourcing/BACKLOG.md item 3.",
+  "trades": ["garage door", "plumbing", "hvac"],
+  "cities": ["Mississauga ON", "Hamilton ON"],
+  "max_pages": 3
+}

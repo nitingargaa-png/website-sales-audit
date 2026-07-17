@@ -11,11 +11,15 @@ The fixtures are the reference side of a manual smoke test: run the
 audit against each URL, tail the saved `TRIAGE_META` block, and diff
 against the expected block here. Any mismatch is either a fixture bug,
 a SKILL.md rule gap, or a real audit regression — the diff tells you
-which. The smoke test itself is not yet run; see the "Smoke test
-procedure" section at the bottom of this file.
+which. See the "Smoke test procedure" section at the bottom of this
+file for the last run.
 
 This file is additive to SKILL.md and WEBSITE_CLAUDE.md and does not
 duplicate rule content — it ties expected outputs to specific inputs.
+
+**The tests in `tests/test_fixtures_golden.py` are authoritative.**
+Where this document and the test param blocks disagree, the tests are
+correct and this document is stale. Fix the document.
 
 ## Schema reference
 
@@ -47,20 +51,33 @@ non-fixture values — they vary per run and are not diffed.
 ### Rationale
 
 Single-location plumbing SMB in Mississauga, Ontario. Owner-operated,
-166 Google reviews at 4.9 stars, SiteBuilder build with no FSM vendor,
-no franchise language, no enterprise signals, and visible 24/7 emergency
-language paired with no chat widget and no automated booking. This is
-the canonical "yes to both" case: every `mctb_applicable: true` signal
-the rules look for is present, and the small-shop operator profile
-combined with sustained review velocity satisfies `vaai_applicable: true`
-as well. No disqualifier fires. Not on GHL, so `ghl_upgrade_candidate`
-is false. This fixture guards against regressions that would suppress
-applicability flags on the cleanest possible applicable prospect.
+SiteBuilder build with no FSM vendor, no franchise language, no
+enterprise signals, and visible 24/7 emergency language paired with no
+chat widget and no automated booking.
+
+`mctb_applicable` is true — the small-shop operator profile signals the
+rules look for are present.
+
+`vaai_applicable` is null: the homepage states no review count (a badge
+and one testimonial only; Google shows 266), so no call-volume proxy is
+observable from the site, and null is the honest value. An earlier
+version of this fixture asserted 166 reviews at 4.9 stars — that figure
+came from SerpApi GBP data in a v12 run, was never on the page, and is
+stale against Google's current 266. Corrected 2026-07-16 against the
+live page.
+
+No disqualifier fires. Not on GHL, so `ghl_upgrade_candidate` is false.
+This fixture guards against regressions that would suppress
+`mctb_applicable` on a clean applicable prospect, and against a
+regression that would infer call volume that the site does not show.
 
 ### Expected values
 
-Taken verbatim from the real saved audit dated 2026-04-17
-(`output/mississaugaplumbingservices-2026-04-16.md`):
+Expected values as of the 2026-07-16 correction. The
+`vaai_applicable: null` value supersedes the 2026-04-17 saved audit
+(`output/mississaugaplumbingservices-2026-04-16.md`), which predated
+the review-count correction. All other values are unchanged from that
+audit.
 
 ```yaml
 schema_version: "1.0"
@@ -69,18 +86,22 @@ business_url: "https://mississaugaplumbingservices.com"
 trade: plumbing
 ghl_upgrade_candidate: false
 mctb_applicable: true
-vaai_applicable: true
+vaai_applicable: null
 disqualifiers: []
 ```
 
 ### Source
 
 Real audit run, not predicted. The `audit_generated_at` timestamp in
-the source file is `2026-04-17T02:43:37Z`.
+the original source file is `2026-04-17T02:43:37Z`.
 
-2026-04-20 Phase F smoke-test re-run matched the 2026-04-17 baseline
-byte-for-byte across all 6 diffable fields. The 2026-04-17 audit
-remains the canonical source.
+The 2026-04-20 Phase F smoke-test re-run matched the 2026-04-17
+baseline across all 6 diffable fields. Both runs are superseded on
+`vaai_applicable` by the 2026-07-16 correction: the 166-review figure
+they rested on came from SerpApi GBP data in a v12 run and was never
+present on the page, so both runs agreed on a value derived from a
+field the page never supplied. `tests/test_fixtures_golden.py` is the
+current authority.
 
 ## Fixture 2 — National chain disqualifier (franchise corporate)
 
@@ -251,16 +272,23 @@ gate ordering.
 
 **Last run:** 2026-04-20.
 
-Producer-side outcome: all three fixtures passed (Fixture 1 re-run
-matched 2026-04-17 baseline byte-for-byte across all 6 diffable
-fields; Fixtures 2 and 3 confirmed against newly-saved audit outputs
-`output/mrrooter-2026-04-20.md` and
+Producer-side outcome as recorded at the time: all three fixtures
+passed (Fixture 1 re-run matched the 2026-04-17 baseline across all 6
+diffable fields; Fixtures 2 and 3 confirmed against newly-saved audit
+outputs `output/mrrooter-2026-04-20.md` and
 `output/warmandcoollondon-2026-04-20.md`).
+
+**Superseded for Fixture 1 (2026-07-16):** the Fixture 1 pass rested on
+`vaai_applicable: true`, derived from a 166-review count that was never
+on the page. The corrected expected value is `null`. Fixtures 2 and 3
+are unaffected.
 
 Consumer-side outcome: all three fixtures passed end-to-end via
 `execution/triage_handoff.py --audit`. Fixture 1 routed normally
 (MCTB/VAAI Tier 1 at score 89, GRM skip on knockout gate, WEB skip
-on score below T2). Fixtures 2 and 3 hit the Fix 8 audit-disqualifier
+on score below T2) — routing recorded under the pre-correction
+`vaai_applicable: true`; re-verify Fixture 1 consumer-side routing
+against the corrected `null`. Fixtures 2 and 3 hit the Fix 8 audit-disqualifier
 gate on all four services, emitting
 `classification_reason=disqualified_per_audit` with the disqualifier
 code carried through the `notes` field (`national_chain` and

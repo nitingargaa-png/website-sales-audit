@@ -141,6 +141,8 @@ with a bundler — that reason does not carry over.
 
 ## 11. location_path: a franchise scored 70 and was queued for a pitch
 
+REFINED 2026-07-19 after the rule over-fired on the plumbing/HVAC batch.
+
 `doddsdoors.com/location/mississauga/` reached the audit queue, scored
 70/100 (yellow), and would have been pitched. Dodds Garage Doors is a
 chain. Neither existing rule could see it:
@@ -205,3 +207,32 @@ intended before a full batch is trusted.
 ("top 3 findings" is a reasonable design) but it has never been confirmed as
 intentional rather than a truncation. Worth one look at judge.py before a
 240-prospect run produces 240 reports with exactly three findings each.
+
+## 15. location_path cannot separate a multi-city chain from an "of <City>" independent
+
+Accepted limitation, decided 2026-07-19.
+
+By PATH alone these two rows are identical:
+
+    Superior Plumbing of Mississauga  ->  /mississauga/   [chain]
+    Plumber On Demand of Mississauga  ->  /mississauga/   [independent]
+
+Same bare-city path, both names contain the city, neither trips another
+per-row signal. What separates them is cross-row: "Superior ... of Hamilton"
+also exists in the batch. That is the multi_location_domain signal keyed on
+NAME STEM instead of domain, and it is not built.
+
+The refined rule spares BOTH (refinement 3: name-has-city + no other signal
+-> clear). So ~2 genuine multi-city chains per batch land in the prospect
+pool instead of review.
+
+Accepted because the cost is asymmetric: a chain wrongly sent to prospect
+gets AUDITED (90s + one judge call, then discarded on reading the report),
+whereas an independent wrongly sent to review needs a human to clear it.
+Wasting machine time is cheaper than wasting operator time. And chains tend
+to score well, sorting to the bottom of the rebuild list where a non-prospect
+belongs.
+
+Build name-stem cross-row detection only if multi-city-same-name chains turn
+out common in the US grid. It is real machinery for a handful of rows and is
+exactly the kind of speculative generality this project has cut before.

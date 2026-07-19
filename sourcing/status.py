@@ -113,38 +113,92 @@ def match_manufacturer(name: str) -> Optional[str]:
 
 
 _CITY_ALT = "|".join(lists.LOCATION_PATH_CITIES)
+
+# Explicit multi-location path prefixes. A business with one of these in the
+# URL is telling you it has more than one location, regardless of name.
+_LOC_PREFIX = (r"location|locations|branch|branches|area|areas"
+               r"|service-area|service-areas|franchise|dealer|dealers"
+               r"|store|stores")
+
+# Campaign / ad landing prefixes. NEVER franchise structure — any business
+# runs ads to a city-named landing page. Live 2026-07-19:
+# "Drain 1 Plumbers ... /ads/mississauga" was a Google Ads path, not a chain.
+_CAMPAIGN_PREFIX = ("ads", "lp", "landing", "ppc", "go", "promo", "campaign")
+
+# City appears after an explicit location prefix: unambiguous chain.
+LOCATION_PATH_PREFIXED = re.compile(
+    r"/(?:" + _LOC_PREFIX + r")/(?:" + _CITY_ALT + r")", re.I)
+
+# City appears as a bare path segment (/mississauga, /hamilton-oakville):
+# a chain signal UNLESS the business name already contains that city and
+# nothing else flags it — see match_location_path.
+LOCATION_PATH_BARE = re.compile(
+    r"/(?:" + _CITY_ALT + r")(?:-(?:" + _CITY_ALT + r"))?/?$", re.I)
+
+# Kept as the public name the tests import; = prefixed OR bare.
 LOCATION_PATH = re.compile(
-    r"/(?:location|locations|branch|branches|areas?|service-areas?"
-    r"|franchise|dealers?|stores?)?/?"
-    r"(?:" + _CITY_ALT + r")(?:-(?:" + _CITY_ALT + r"))?/?$",
-    re.I)
+    r"/(?:(?:" + _LOC_PREFIX + r")/)?(?:" + _CITY_ALT + r")"
+    r"(?:-(?:" + _CITY_ALT + r"))?/?$", re.I)
 
 
-def match_location_path(url: Optional[str]) -> Optional[str]:
+def _name_contains_city(name: Optional[str], city: str) -> bool:
+    if not name:
+        return False
+    return city.replace("-", "") in re.sub(r"[^a-z]", "", name.lower())
+
+
+def match_location_path(url: Optional[str], name: Optional[str] = None,
+                        other_signal: bool = False) -> Optional[str]:
     """
-    A city name in the URL PATH is a multi-location signal. In the DOMAIN it
-    is not.
+    A city in the URL PATH is a multi-location signal. In the DOMAIN it is
+    not (local operators name their city constantly — see the domain tests).
 
-    Only a business with more than one location needs a per-city page. A local
-    operator puts its city in the domain instead — and three of those were in
-    the live 2026-07-17 batch (garagerepairmississauga.ca,
-    mississaugaongarageservices.ca, garagedoorcomississauga.ca), all
-    independents, none matched here.
+    Three refinements from the live 2026-07-19 batch, where the bare-city
+    rule over-fired on plumbing/HVAC "of <City>" businesses:
 
-    Found because doddsdoors.com/location/mississauga/ scored 70 and was
-    queued for a pitch. Dodds Garage Doors is a chain. franchise_brand did
-    not know the name; multi_location_domain needs 3+ rows on one domain in
-    one batch and Dodds surfaced once. Neither rule could see it — but the
-    URL said so.
+      1. Campaign prefixes (/ads/, /lp/, ...) never count. An ad landing
+         page named for a city says nothing about location count.
 
-    Review, not exclude: a single-location shop on a shared platform can end
-    up with a city path, and a human look settles it in seconds.
+      2. An explicit /location(s)/<city> or /branch/<city> prefix ALWAYS
+         counts, even if the name contains the city — the prefix is the
+         business declaring multiple sites (Fortify, Enercare, LG here).
+
+      3. A BARE /<city> path is spared ONLY when the business name already
+         contains that city AND no other rule flagged the row. "Plumber On
+         Demand of Mississauga" at /mississauga is naming its one location,
+         same as garagerepairmississauga.ca does in the domain. But if
+         franchise_brand or multi_location_domain also fired (Mr Rooter,
+         John The Plumber, Dr HVAC), the row is a chain and stays flagged.
+
+    Genuinely ambiguous by path alone: a single bare /<city>, city in name,
+    nothing else — e.g. "The Super Plumber - Hamilton" at /hamilton/. Cannot
+    be told from an independent by URL structure. Resolved toward PROSPECT
+    (not flagged); worst case the audit runs on a small local chain, which
+    is cheap. The review lane is for what a signal can decide; this the
+    signal cannot.
+
+    Returns the matched path (for the review_reason) or None.
     """
     if not url:
         return None
     path = urlparse(url).path or "/"
-    m = LOCATION_PATH.search(path)
-    return path if m else None
+    seg = [p for p in path.split("/") if p]
+    if not seg:
+        return None
+
+    if seg[0].lower() in _CAMPAIGN_PREFIX:
+        return None
+
+    if LOCATION_PATH_PREFIXED.search(path):
+        return path
+
+    if LOCATION_PATH_BARE.search(path):
+        city = seg[-1]
+        if _name_contains_city(name, city) and not other_signal:
+            return None
+        return path
+
+    return None
 
 
 def is_out_of_area(domain: str) -> bool:
@@ -201,7 +255,12 @@ def classify(row: Dict) -> Dict:
     if mfr:
         reasons.append(f"manufacturer_dealer:{mfr}")
 
-    loc = match_location_path(row.get("url"))
+    # other_signal: has any franchise/manufacturer/multi-location rule
+    # already fired? If so, a bare /<city> path is NOT spared even when the
+    # name contains the city — the row is already known to be a chain.
+    other_signal = bool(reasons) or row.get("multi_location_domain", False)
+    loc = match_location_path(row.get("url"), row.get("business_name"),
+                              other_signal)
     if loc:
         reasons.append(f"location_path:{loc}")
 

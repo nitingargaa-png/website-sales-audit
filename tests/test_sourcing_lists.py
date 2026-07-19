@@ -218,89 +218,106 @@ def test_clean_row_stays_clean():
 # --- INCIDENT 4: a franchise scored 70 and was queued for a pitch --------
 #
 # doddsdoors.com/location/mississauga/ reached the audit queue, scored
-# 70/100 (yellow), and would have been pitched. Dodds Garage Doors is a
-# chain. Neither existing rule could see it:
-#   - franchise_brand does not know the name
-#   - multi_location_domain needs 3+ rows on one domain in ONE batch, and
-#     Dodds surfaced once
-# The URL said so: only a business with more than one location needs a
-# per-city page.
+# 70/100, would have been pitched. Dodds is a chain. Neither franchise_brand
+# (no name match) nor multi_location_domain (needs 3+ rows) could see it.
+# A city in the URL PATH is the signal.
 #
-# The rule reads the PATH, never the DOMAIN. Local operators put their city
-# in the domain constantly — three did in the same live batch — and none of
-# them are chains.
+# The rule was then refined on the live 2026-07-19 plumbing/HVAC batch,
+# where a bare-city rule over-fired on "of <City>" businesses. Three
+# refinements — see match_location_path docstring:
+#   1. campaign prefixes (/ads/) never count
+#   2. explicit /location(s)/<city> always counts
+#   3. bare /<city> spared when name has the city AND nothing else flags it
 
-FRANCHISE_LOCATION_PATHS = [
-    "https://www.doddsdoors.com/location/mississauga/",
-    "http://www.garagedoordepot.ca/mississauga-oakville",
-    "https://precisiondoor.ca/mississauga",
-    "https://example.com/locations/hamilton",
-    "https://example.com/service-areas/oakville/",
-    "https://example.com/branch/brampton",
+CHAINS_FLAGGED = [
+    ("The Garage Door Depot", "http://x.ca/mississauga-oakville", False),
+    ("Dodds Garage Doors", "http://x.ca/location/mississauga/", False),
+    ("Fortify Services Mississauga", "http://x.ca/locations/mississauga/", False),
+    ("Enercare", "http://x.ca/locations/mississauga", False),
+    ("LG Home Comfort", "http://x.ca/locations/mississauga/", False),
+    ("Reliance Heating", "http://x.ca/mississauga/", False),
+    ("Canadian Heating and Air", "http://x.ca/hamilton/", False),
+    ("Maple Leaf Plumber", "http://x.ca/hamilton/", False),
+    ("Beyond HVAC", "http://x.ca/mississauga", False),
+    # name has city BUT another signal fires -> stays flagged
+    ("Mr Rooter Plumbing of Mississauga ON", "http://mrrooter.ca/mississauga/", False),
+    ("John The Plumber", "http://johntheplumber.ca/mississauga", True),
+    ("Dr HVAC", "http://drhvac.ca/mississauga/", True),
 ]
 
-INDEPENDENTS_CITY_IN_DOMAIN = [
-    "http://www.garagerepairmississauga.ca",
-    "https://www.mississaugaongarageservices.ca",
-    "https://www.garagedoorcomississauga.ca",
-    "https://ontariogaragedoors.ca/",
-    "https://www.candoor.ca",
-    "http://zenithgaragedoor.ca",
-    "https://www.bmgaragedoor.com/ca",
+INDEPENDENTS_CLEARED = [
+    # /ads/ campaign path
+    ("Drain 1 Plumbers In Mississauga", "http://d1.ca/ads/mississauga", False),
+    # name is the city, bare path, nothing else flags
+    ("PLUMBER ON DEMAND of MISSISSAUGA ON", "http://pod.ca/mississauga", False),
+    ("Plumber On Dial Of Mississauga", "http://pd.ca/mississauga", False),
+    # city in DOMAIN not path
+    ("Garage Repair Mississauga", "http://garagerepairmississauga.ca/", False),
+    ("Ontario Garage Doors", "https://ontariogaragedoors.ca/", False),
 ]
 
 
-@pytest.mark.parametrize("url", FRANCHISE_LOCATION_PATHS)
-def test_location_path_catches_per_city_pages(url):
-    assert match_location_path(url), (
-        f"{url!r} has a city in the PATH — only a multi-location business "
-        f"needs one. Live 2026-07-17: doddsdoors.com/location/mississauga/ "
-        f"scored 70 and was queued for a pitch.")
+@pytest.mark.parametrize("name,url,multi", CHAINS_FLAGGED)
+def test_location_path_flags_chains(name, url, multi):
+    r = classify(_row(business_name=name, domain=url.split("/")[2], url=url,
+                      multi_location_domain=multi))
+    assert r["status"] == "review", f"{name} {url} should be flagged"
 
 
-@pytest.mark.parametrize("url", INDEPENDENTS_CITY_IN_DOMAIN)
-def test_location_path_ignores_city_in_domain(url):
-    """
-    Local operators put their city in the DOMAIN constantly — three did in
-    the live 2026-07-17 batch. None is a chain. If this rule ever bins them,
-    it bins most of the prospect list.
+@pytest.mark.parametrize("name,url,multi", INDEPENDENTS_CLEARED)
+def test_location_path_clears_independents(name, url, multi):
+    r = classify(_row(business_name=name, domain=url.split("/")[2], url=url,
+                      multi_location_domain=multi))
+    assert r["status"] == "clean", (
+        f"{name} {url} should clear. Live 2026-07-19 false positives: "
+        f"/ads/ landing paths and 'of <City>' names on bare /<city>.")
 
-    Two things protect against it and only one is load-bearing:
-      - the pattern requires a '/' immediately before the city, so
-        'garagerepairmississauga.ca' cannot match (the city is mid-token)
-      - match_location_path() passes urlparse().path, not the whole URL
 
-    The first is doing the work. Verified 2026-07-17 by stubbing the second
-    out: every one of these still passed. urlparse is defence-in-depth, not
-    the mechanism. Do not remove the leading '/' from the pattern thinking
-    urlparse covers it.
-    """
-    assert match_location_path(url) is None, (
-        f"{url!r} has its city in the DOMAIN, not the path. A rule that "
-        f"matches this will bin every local operator that names its city.")
+def test_mr_rooter_flagged_despite_name_city():
+    """Mr Rooter of Mississauga at /mississauga/ — name contains the city,
+    so refinement 3 would spare it, BUT franchise_brand also fires. The
+    other_signal guard keeps it flagged. Regression: if other_signal is
+    dropped, a known franchise clears."""
+    r = classify(_row(business_name="Mr Rooter Plumbing of Mississauga ON",
+                      domain="mrrooter.ca",
+                      url="http://mrrooter.ca/mississauga/"))
+    assert r["status"] == "review"
+    assert "mr rooter" in r["review_reason"]
+
+
+def test_ads_path_never_franchise():
+    """A /ads/<city> path is a Google Ads landing page, never franchise
+    structure. Must clear even when the name does NOT contain the city —
+    otherwise the guard is dead code masked by refinement 3. Live 2026-07-19:
+    'Drain 1 Plumbers In Mississauga' /ads/mississauga."""
+    from sourcing.status import match_location_path
+    # name without the city: only the /ads/ guard can clear these
+    assert match_location_path("http://x.ca/ads/mississauga",
+                               name="Quality Drain Co") is None
+    assert match_location_path("http://x.ca/lp/hamilton",
+                               name="Best Plumbers") is None
+    assert match_location_path("http://x.ca/landing/toronto",
+                               name="Acme HVAC") is None
+
+
+def test_explicit_location_prefix_beats_name_city():
+    """Fortify Services Mississauga at /locations/mississauga/ — name has the
+    city, but the /locations/ prefix is explicit multi-site declaration and
+    wins over refinement 3."""
+    from sourcing.status import match_location_path
+    assert match_location_path(
+        "http://x.ca/locations/mississauga/",
+        name="Fortify Services Mississauga") is not None
 
 
 def test_location_pattern_requires_slash_before_city():
-    """
-    Pins the mechanism directly, independent of urlparse.
-
-    'mississauga' appearing mid-token in a hostname must never match. This is
-    what actually keeps garagerepairmississauga.ca out of the review lane.
-    """
+    """The mechanism that keeps city-in-domain out. Independent of urlparse:
+    verified by stubbing urlparse, at which point city-in-domain still did
+    not match because the pattern requires a '/' before the city."""
     from sourcing.status import LOCATION_PATH
     assert not LOCATION_PATH.search("garagerepairmississauga.ca")
     assert not LOCATION_PATH.search("/garagerepairmississauga")
     assert LOCATION_PATH.search("/mississauga")
-
-
-def test_location_path_routes_to_review_not_excluded(_row=None):
-    r = classify({"business_name": "Dodds Garage Doors",
-                  "domain": "doddsdoors.com",
-                  "url": "https://www.doddsdoors.com/location/mississauga/",
-                  "status": None, "review_reason": None,
-                  "disqualify_reason": None, "multi_location_domain": False})
-    assert r["status"] == "review"
-    assert "location_path" in r["review_reason"]
 
 
 # --- INCIDENT 5: tracking params reached the audit -----------------------

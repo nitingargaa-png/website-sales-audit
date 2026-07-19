@@ -1,6 +1,10 @@
 """
 normalize.py — raw Places dict -> contract row.
 
+No owner_name / owner_source. Both were cut 2026-07-17 after two probes
+measured 0% coverage against a 40-70% expectation. See emit.py for the
+measurement and the reason. Do not re-add without a source that fills them.
+
 Slice 1 does no filtering. Every row comes out status="clean" except the
 no_website lane, which is a deterministic fact and not a judgment. Filters
 land in Slice 2 (sourcing/status.py).
@@ -11,10 +15,42 @@ query city, which is what was searched and is right often enough for
 Slice 1. Verify on the first live run.
 """
 from typing import Dict, List, Optional
-from urllib.parse import urlparse
+from urllib.parse import (parse_qsl, urlencode, urlparse, urlsplit,
+                          urlunsplit)
 
 # Suffixes where the registrable domain is three labels, not two.
 COMPOUND_SUFFIXES = {"co.uk", "com.au", "co.nz", "co.za", "com.br", "co.jp"}
+
+# Tracking params Places hands back on the business's registered websiteUri.
+# Seen live 2026-07-17:
+#   bmgaragedoor.com/ca?utm_source=GoogleMyBusiness&utm_medium=...&utm_campaign=LIMMO
+#   doddsdoors.com/location/mississauga/?utm_source=google&utm_medium=organic
+# These do NOT affect dedupe (that is place_id) and do NOT affect domain_of()
+# (urlparse().netloc never sees the query). The problem is narrower: the url
+# column feeds audit_batch.py, so PSI measures a tracked URL and the report
+# shows one to the prospect. Strip them from the emitted url only.
+TRACKING_PREFIXES = ("utm_", "gclid", "fbclid", "mc_", "_hs", "msclkid",
+                     "dclid", "yclid", "igshid", "ref_", "campaignid")
+
+
+def strip_tracking(url: Optional[str]) -> Optional[str]:
+    """
+    Remove tracking params, keep everything else.
+
+    Conservative: only known tracking prefixes are dropped. A query param
+    that is not on the list stays, because some sites route real content
+    through one (?page=, ?id=). Dropping the whole query string would be
+    simpler and would occasionally fetch the wrong page.
+    """
+    if not url:
+        return url
+    parts = urlsplit(url)
+    if not parts.query:
+        return url
+    kept = [(k, v) for k, v in parse_qsl(parts.query, keep_blank_values=True)
+            if not any(k.lower().startswith(p) for p in TRACKING_PREFIXES)]
+    return urlunsplit((parts.scheme, parts.netloc, parts.path,
+                       urlencode(kept), parts.fragment))
 
 
 def domain_of(url: Optional[str]) -> str:
@@ -62,7 +98,7 @@ def _city_from_components(p: Dict) -> Optional[str]:
 
 def to_row(p: Dict) -> Dict:
     name = (p.get("displayName") or {}).get("text") or ""
-    url = p.get("websiteUri") or None
+    url = strip_tracking(p.get("websiteUri") or None)
     phone = p.get("nationalPhoneNumber") or None
 
     row = {
@@ -79,8 +115,6 @@ def to_row(p: Dict) -> Dict:
 
         "gbp_category": (p.get("primaryTypeDisplayName") or {}).get("text")
                         or p.get("primaryType"),
-        "owner_name": None,      # Slice 3
-        "owner_source": None,    # Slice 3
         "phone": phone,
         "disqualify_reason": None,
 

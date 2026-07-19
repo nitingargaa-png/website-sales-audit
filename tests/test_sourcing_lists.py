@@ -21,7 +21,9 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from sourcing import lists  # noqa: E402
 from sourcing.status import (classify, match_franchise_brand,  # noqa: E402
-                             match_manufacturer, normalize_name)
+                             match_location_path, match_manufacturer,
+                             normalize_name)
+from sourcing.normalize import strip_tracking  # noqa: E402
 from sourcing.dedupe import (dedupe_by_place_id,              # noqa: E402
                              flag_multi_location)
 
@@ -211,3 +213,121 @@ def test_clean_row_stays_clean():
                       url="https://motiongaragedoors.ca"))
     assert r["status"] == "clean"
     assert r["review_reason"] is None
+
+
+# --- INCIDENT 4: a franchise scored 70 and was queued for a pitch --------
+#
+# doddsdoors.com/location/mississauga/ reached the audit queue, scored
+# 70/100 (yellow), and would have been pitched. Dodds Garage Doors is a
+# chain. Neither existing rule could see it:
+#   - franchise_brand does not know the name
+#   - multi_location_domain needs 3+ rows on one domain in ONE batch, and
+#     Dodds surfaced once
+# The URL said so: only a business with more than one location needs a
+# per-city page.
+#
+# The rule reads the PATH, never the DOMAIN. Local operators put their city
+# in the domain constantly — three did in the same live batch — and none of
+# them are chains.
+
+FRANCHISE_LOCATION_PATHS = [
+    "https://www.doddsdoors.com/location/mississauga/",
+    "http://www.garagedoordepot.ca/mississauga-oakville",
+    "https://precisiondoor.ca/mississauga",
+    "https://example.com/locations/hamilton",
+    "https://example.com/service-areas/oakville/",
+    "https://example.com/branch/brampton",
+]
+
+INDEPENDENTS_CITY_IN_DOMAIN = [
+    "http://www.garagerepairmississauga.ca",
+    "https://www.mississaugaongarageservices.ca",
+    "https://www.garagedoorcomississauga.ca",
+    "https://ontariogaragedoors.ca/",
+    "https://www.candoor.ca",
+    "http://zenithgaragedoor.ca",
+    "https://www.bmgaragedoor.com/ca",
+]
+
+
+@pytest.mark.parametrize("url", FRANCHISE_LOCATION_PATHS)
+def test_location_path_catches_per_city_pages(url):
+    assert match_location_path(url), (
+        f"{url!r} has a city in the PATH — only a multi-location business "
+        f"needs one. Live 2026-07-17: doddsdoors.com/location/mississauga/ "
+        f"scored 70 and was queued for a pitch.")
+
+
+@pytest.mark.parametrize("url", INDEPENDENTS_CITY_IN_DOMAIN)
+def test_location_path_ignores_city_in_domain(url):
+    """
+    Local operators put their city in the DOMAIN constantly — three did in
+    the live 2026-07-17 batch. None is a chain. If this rule ever bins them,
+    it bins most of the prospect list.
+
+    Two things protect against it and only one is load-bearing:
+      - the pattern requires a '/' immediately before the city, so
+        'garagerepairmississauga.ca' cannot match (the city is mid-token)
+      - match_location_path() passes urlparse().path, not the whole URL
+
+    The first is doing the work. Verified 2026-07-17 by stubbing the second
+    out: every one of these still passed. urlparse is defence-in-depth, not
+    the mechanism. Do not remove the leading '/' from the pattern thinking
+    urlparse covers it.
+    """
+    assert match_location_path(url) is None, (
+        f"{url!r} has its city in the DOMAIN, not the path. A rule that "
+        f"matches this will bin every local operator that names its city.")
+
+
+def test_location_pattern_requires_slash_before_city():
+    """
+    Pins the mechanism directly, independent of urlparse.
+
+    'mississauga' appearing mid-token in a hostname must never match. This is
+    what actually keeps garagerepairmississauga.ca out of the review lane.
+    """
+    from sourcing.status import LOCATION_PATH
+    assert not LOCATION_PATH.search("garagerepairmississauga.ca")
+    assert not LOCATION_PATH.search("/garagerepairmississauga")
+    assert LOCATION_PATH.search("/mississauga")
+
+
+def test_location_path_routes_to_review_not_excluded(_row=None):
+    r = classify({"business_name": "Dodds Garage Doors",
+                  "domain": "doddsdoors.com",
+                  "url": "https://www.doddsdoors.com/location/mississauga/",
+                  "status": None, "review_reason": None,
+                  "disqualify_reason": None, "multi_location_domain": False})
+    assert r["status"] == "review"
+    assert "location_path" in r["review_reason"]
+
+
+# --- INCIDENT 5: tracking params reached the audit -----------------------
+#
+# Places returns the business's registered websiteUri, tracking params and
+# all. Live 2026-07-17:
+#   bmgaragedoor.com/ca?utm_source=GoogleMyBusiness&...&utm_campaign=LIMMO
+# PSI then measures the tracked URL and the report shows one to the
+# prospect. Dedupe was never affected (that is place_id) and neither was
+# domain_of() (urlparse().netloc does not see the query).
+
+def test_strip_tracking_removes_utm():
+    out = strip_tracking(
+        "https://www.bmgaragedoor.com/ca?utm_source=GoogleMyBusiness"
+        "&utm_medium=GoogleMyBusiness&utm_campaign=LIMMO")
+    assert out == "https://www.bmgaragedoor.com/ca"
+
+
+def test_strip_tracking_keeps_real_params():
+    """Only known tracking prefixes go. Some sites route real content
+    through a query param; dropping the whole string would fetch the wrong
+    page."""
+    assert strip_tracking("https://example.com/p?id=42&utm_source=x") == \
+        "https://example.com/p?id=42"
+
+
+def test_strip_tracking_passthrough():
+    assert strip_tracking("https://ontariogaragedoors.ca/") == \
+        "https://ontariogaragedoors.ca/"
+    assert strip_tracking(None) is None

@@ -184,3 +184,25 @@ MANUFACTURER_TERMS = {
     "rheem",
     "goodman",
 }
+
+
+# Cities used in franchise location-page paths. GTA + Ontario metros, since
+# that is the current grid. Add US metros when the US grid runs.
+#
+# THIS LIST IS MATCHED AGAINST THE URL PATH ONLY, NEVER THE DOMAIN.
+# That distinction is the whole rule. Live 2026-07-17:
+#     garagerepairmississauga.ca      -> independent, city in DOMAIN
+#     mississaugaongarageservices.ca  -> independent, city in DOMAIN
+#     garagedoorcomississauga.ca      -> independent, city in DOMAIN
+#     doddsdoors.com/location/mississauga/ -> franchise, city in PATH
+# Local operators put their city in the domain constantly. Only a chain puts
+# a city in the path, because only a chain has more than one.
+LOCATION_PATH_CITIES = (
+    "mississauga", "toronto", "hamilton", "brampton", "oakville",
+    "burlington", "milton", "vaughan", "markham", "etobicoke",
+    "scarborough", "oshawa", "barrie", "guelph", "kitchener", "waterloo",
+    "cambridge", "london", "ottawa", "windsor", "ajax", "pickering",
+    "whitby", "richmond-hill", "newmarket", "aurora", "caledon",
+    "georgetown", "bolton", "stoney-creek", "north-york", "york-region",
+    "halton", "peel", "durham", "gta",
+)

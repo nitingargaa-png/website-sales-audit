@@ -58,6 +58,7 @@ anything unexpected — which is how it stops getting opened.
 """
 import re
 from typing import Dict, List, Optional
+from urllib.parse import urlparse
 
 from sourcing import lists
 
@@ -109,6 +110,41 @@ def match_manufacturer(name: str) -> Optional[str]:
         if t and f" {t} " in padded:
             return term
     return None
+
+
+_CITY_ALT = "|".join(lists.LOCATION_PATH_CITIES)
+LOCATION_PATH = re.compile(
+    r"/(?:location|locations|branch|branches|areas?|service-areas?"
+    r"|franchise|dealers?|stores?)?/?"
+    r"(?:" + _CITY_ALT + r")(?:-(?:" + _CITY_ALT + r"))?/?$",
+    re.I)
+
+
+def match_location_path(url: Optional[str]) -> Optional[str]:
+    """
+    A city name in the URL PATH is a multi-location signal. In the DOMAIN it
+    is not.
+
+    Only a business with more than one location needs a per-city page. A local
+    operator puts its city in the domain instead — and three of those were in
+    the live 2026-07-17 batch (garagerepairmississauga.ca,
+    mississaugaongarageservices.ca, garagedoorcomississauga.ca), all
+    independents, none matched here.
+
+    Found because doddsdoors.com/location/mississauga/ scored 70 and was
+    queued for a pitch. Dodds Garage Doors is a chain. franchise_brand did
+    not know the name; multi_location_domain needs 3+ rows on one domain in
+    one batch and Dodds surfaced once. Neither rule could see it — but the
+    URL said so.
+
+    Review, not exclude: a single-location shop on a shared platform can end
+    up with a city path, and a human look settles it in seconds.
+    """
+    if not url:
+        return None
+    path = urlparse(url).path or "/"
+    m = LOCATION_PATH.search(path)
+    return path if m else None
 
 
 def is_out_of_area(domain: str) -> bool:
@@ -164,6 +200,10 @@ def classify(row: Dict) -> Dict:
     mfr = match_manufacturer(name)
     if mfr:
         reasons.append(f"manufacturer_dealer:{mfr}")
+
+    loc = match_location_path(row.get("url"))
+    if loc:
+        reasons.append(f"location_path:{loc}")
 
     if row.get("multi_location_domain"):
         reasons.append("multi_location_domain")

@@ -138,3 +138,70 @@ file per cell under `sourcing_cache/`. Not sqlite: a few KB per cell,
 write-once, read-rarely, and a directory of JSON is greppable when a batch
 looks wrong. lead-engine used sql.js because it was already a JS project
 with a bundler — that reason does not carry over.
+
+## 11. location_path: a franchise scored 70 and was queued for a pitch
+
+`doddsdoors.com/location/mississauga/` reached the audit queue, scored
+70/100 (yellow), and would have been pitched. Dodds Garage Doors is a
+chain. Neither existing rule could see it:
+
+  - `franchise_brand` does not know the name
+  - `multi_location_domain` needs 3+ rows on one domain in ONE batch, and
+    Dodds surfaced once
+
+The URL said so. Only a business with more than one location needs a
+per-city page. Added `match_location_path()` — city in the PATH routes to
+review.
+
+THE RULE READS THE PATH, NEVER THE DOMAIN. Local operators put their city
+in the domain constantly; three did in the same live batch
+(garagerepairmississauga.ca, mississaugaongarageservices.ca,
+garagedoorcomississauga.ca), all independents. The protection is the
+required '/' before the city, not urlparse — verified by stubbing urlparse
+out, at which point every one of those still passed. Pinned by
+`test_location_pattern_requires_slash_before_city`.
+
+Caught 3/3 franchises and 0/17 independents on the live 2026-07-17 batch.
+
+`LOCATION_PATH_CITIES` is GTA/Ontario only. The US grid will need US metros
+before this rule does anything there.
+
+## 12. Tracking params reached the audit
+
+Places returns the business's registered `websiteUri` including tracking
+params. Live 2026-07-17:
+
+    bmgaragedoor.com/ca?utm_source=GoogleMyBusiness&utm_campaign=LIMMO
+    doddsdoors.com/location/mississauga/?utm_source=google&utm_medium=organic
+
+PSI measured the tracked URL and the report would have shown one to the
+prospect. Fixed with `normalize.strip_tracking()`.
+
+Note what was NOT affected, contrary to first assumption: dedupe (keyed on
+place_id) and `domain_of()` (urlparse().netloc never sees the query). The
+problem was only ever the emitted url column.
+
+Strip is conservative — known tracking prefixes only. Some sites route real
+content through a query param (?page=, ?id=), so dropping the whole query
+string would occasionally fetch the wrong page.
+
+## 13. PSI fails on roughly a third of prospects
+
+Live 2026-07-17, 15 prospects: four HTTP 500s, two timeouts, one HTTP 400.
+
+`garagemastertech.ca` degraded honestly — "NOT MEASURED — Speed scores
+null, excluded from total", 80% of weight measured, and the renormalisation
+in score.compute() handled it correctly.
+
+But `ada-door-repair.ca`, `zenithgaragedoor.ca` and `bmgaragedoor.com` each
+logged a 500 AND still produced an LCP, so a partial run got through and the
+score does not say so. At 240 prospects that is ~70 with degraded speed data
+and only some of them flagged. Worth establishing which behaviour is
+intended before a full batch is trusted.
+
+## 14. The judge returns exactly 3 findings, every time
+
+19 of 19 audits on 2026-07-17: "3 findings". Probably a deliberate cap
+("top 3 findings" is a reasonable design) but it has never been confirmed as
+intentional rather than a truncation. Worth one look at judge.py before a
+240-prospect run produces 240 reports with exactly three findings each.

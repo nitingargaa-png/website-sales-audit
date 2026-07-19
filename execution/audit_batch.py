@@ -183,8 +183,42 @@ def audit_one(url: str, outdir: str, want_pdf: bool,
         f.write(md)
     print(f"        {md_path}")
 
+    # A PDF is a SENDABLE artifact. It must never be written to the normal
+    # path on incomplete evidence — a degraded score reads as an authoritative
+    # verdict to the prospect. Three ways a score is not sendable:
+    #   dq              -> disqualified (franchise/chain/etc); never pitch
+    #   site_score None -> nothing measurable at all
+    #   weight_covered  -> PSI failed/partial, score renormalised over < 100%
+    #   judge refused   -> j is None; the judged half never ran
+    # First run of this batch produced a "12/100" PDF on a site PSI never
+    # measured. Disqualified was already skipped; the rest went to the send
+    # path. Now degraded PDFs go to pdf/_degraded/ — a visible worklist of
+    # "re-run when PSI recovers", impossible to send by accident because they
+    # are not in the folder you attach from.
+    cov = sc.get("weight_covered", 100)
+    degraded_reason = None
+    if sc["site_score"] is None:
+        degraded_reason = "nothing measurable"
+    elif j is None:
+        degraded_reason = "judge refused — judged tier missing"
+    elif cov < 100:
+        degraded_reason = f"only {cov}% of weight measured (PSI partial)"
+
     pdf_path = None
-    if want_pdf and PDF_AVAILABLE and not dq:
+    if want_pdf and PDF_AVAILABLE and dq:
+        print("        [pdf] skipped — prospect disqualified, do not send")
+    elif want_pdf and PDF_AVAILABLE and degraded_reason:
+        deg_dir = os.path.join(outdir, "pdf", "_degraded")
+        os.makedirs(deg_dir, exist_ok=True)
+        pdf_path = os.path.join(deg_dir, f"{slug(url)}-{today}.pdf")
+        try:
+            render_pdf.render(pdf_path, url, m, p, v, sc, j, agency, contact)
+            print(f"        [pdf] DEGRADED ({degraded_reason})")
+            print(f"        {pdf_path}  — do NOT send, re-run first")
+        except Exception as e:
+            print(f"        [pdf] failed: {e}")
+            pdf_path = None
+    elif want_pdf and PDF_AVAILABLE:
         pdf_path = os.path.join(outdir, "pdf", f"{slug(url)}-{today}.pdf")
         try:
             render_pdf.render(pdf_path, url, m, p, v, sc, j, agency, contact)
@@ -192,12 +226,10 @@ def audit_one(url: str, outdir: str, want_pdf: bool,
         except Exception as e:
             print(f"        [pdf] failed: {e}")
             pdf_path = None
-    elif want_pdf and dq:
-        print("        [pdf] skipped — prospect disqualified, do not send")
 
     return {"url": url, "md": md_path, "pdf": pdf_path,
             "score": sc["site_score"], "band": sc["band"],
-            "disqualifiers": dq}
+            "disqualifiers": dq, "degraded": degraded_reason}
 
 
 def main():
@@ -263,6 +295,12 @@ def main():
     dq = [r for r in results if r["disqualifiers"]]
     if dq:
         print(f"Disqualified: {len(dq)}")
+    degraded = [r for r in results if r.get("degraded")]
+    if degraded:
+        print(f"Degraded (PDF withheld to pdf/_degraded/, do NOT send): "
+              f"{len(degraded)}")
+        for r in degraded:
+            print(f"    {r['url']}  — {r['degraded']}")
     scored = [r for r in results if r["score"] is not None]
     if scored:
         scored.sort(key=lambda r: r["score"])

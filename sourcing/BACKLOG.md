@@ -195,18 +195,19 @@ Live 2026-07-17, 15 prospects: four HTTP 500s, two timeouts, one HTTP 400.
 null, excluded from total", 80% of weight measured, and the renormalisation
 in score.compute() handled it correctly.
 
-But `ada-door-repair.ca`, `zenithgaragedoor.ca` and `bmgaragedoor.com` each
-logged a 500 AND still produced an LCP, so a partial run got through and the
-score does not say so. At 240 prospects that is ~70 with degraded speed data
-and only some of them flagged. Worth establishing which behaviour is
-intended before a full batch is trusted.
+RESOLVED 2026-07-19: the partial IS disclosed. ada-door-repair.ca logged a
+500 and its report reads "lab data (simulated), 2 runs" — not 3. The failed
+run is stated in the run count, and score.compute() renormalises over what
+measured. A prospect whose PSI fails entirely shows "NOT MEASURED — Speed
+excluded from total". Both are honest. No silent partial. No fix needed;
+expect a spread of "1 run" / "2 runs" / "NOT MEASURED" across a full batch.
 
 ## 14. The judge returns exactly 3 findings, every time
 
-19 of 19 audits on 2026-07-17: "3 findings". Probably a deliberate cap
-("top 3 findings" is a reasonable design) but it has never been confirmed as
-intentional rather than a truncation. Worth one look at judge.py before a
-240-prospect run produces 240 reports with exactly three findings each.
+CONFIRMED DELIBERATE 2026-07-19. judge.py's prompt defines top_findings as a
+fixed three-slot template ({evidence, impact, fix} x3). The model returns
+three by design, not truncation. The uniform "3 findings" across every audit
+is correct behaviour. Closed.
 
 ## 15. location_path cannot separate a multi-city chain from an "of <City>" independent
 

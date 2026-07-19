@@ -285,8 +285,11 @@ are unaffected.
 
 Consumer-side outcome: all three fixtures passed end-to-end via
 `execution/triage_handoff.py --audit`. Fixture 1 routed normally
-(MCTB/VAAI Tier 1 at score 89, GRM skip on knockout gate, WEB skip
-on score below T2) — routing recorded under the pre-correction
+(MCTB/VAAI Tier 1, GRM skip on knockout gate, WEB skip below T2)
+NOTE: the "score 89" once written here was phantom ? no run ever
+produced it. The April audit this fixture cites emits a band and an
+area count, not a 0-100 score; that scale arrived later and was 5x
+low until 2026-07-19. The routing below was also recorded under the pre-correction
 `vaai_applicable: true`; re-verify Fixture 1 consumer-side routing
 against the corrected `null`. Fixtures 2 and 3 hit the Fix 8 audit-disqualifier
 gate on all four services, emitting

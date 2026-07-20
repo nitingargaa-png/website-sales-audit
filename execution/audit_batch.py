@@ -50,6 +50,7 @@ from audit import judge                    # noqa: E402
 from audit import score as score_mod       # noqa: E402
 from audit import applicability            # noqa: E402
 from audit import render_md                # noqa: E402
+from audit import rebuild_leads           # noqa: E402
 from audit.checkpoint import (           # noqa: E402
     write_checkpoint, load_completed_urls)
 
@@ -58,6 +59,15 @@ try:
     PDF_AVAILABLE = True
 except ImportError:
     PDF_AVAILABLE = False
+
+# Broken-site rebuild leads -> PERMANENT synced path, the
+# sibling of sourcing/run.py's NO_WEBSITE_BOOK. A site that
+# will not load is the strongest rebuild pitch there is;
+# capture it instead of dropping it on ABORT. OneDrive so a
+# laptop failure cannot lose it. See audit/rebuild_leads.py.
+REBUILD_BOOK = os.path.join(
+    os.path.expanduser("~"), "OneDrive", "animo_leads",
+    "rebuild_leads.csv")
 
 FETCH_TIMEOUT = 30
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -110,7 +120,18 @@ def audit_one(url: str, outdir: str, want_pdf: bool,
 
     r = render.fetch(url)
     if r["html"] is None:
-        print("  ABORT: homepage would not load. Not audited.")
+        # Do NOT drop a site that would not load — it is the hottest
+        # rebuild lead there is. Record it, tagged, to the synced book.
+        tag = render.last_abort_reason() or "site_down_unknown"
+        try:
+            book = rebuild_leads.capture_broken_site(url, tag, REBUILD_BOOK)
+            print(f"  ABORT ({tag}): recorded as rebuild lead "
+                  f"({book['total']} in book). Not audited.")
+        except OSError as e:
+            fb = os.path.join(outdir, "rebuild_leads_FALLBACK.csv")
+            rebuild_leads.capture_broken_site(url, tag, fb)
+            print(f"  ABORT ({tag}): OneDrive offline ({e}); wrote "
+                  f"{fb} — NOT backed up, move it.")
         return None
 
     html = r["html"]

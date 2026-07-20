@@ -27,6 +27,9 @@ from typing import Dict, Any, Optional, Tuple
 
 import requests
 
+from .abort_reason import from_status as _abort_from_status
+from .abort_reason import from_exception as _abort_from_exception
+
 JINA_BASE = "https://r.jina.ai/"
 FIRECRAWL_URL = "https://api.firecrawl.dev/v1/scrape"
 TIMEOUT_SECS = 60
@@ -75,6 +78,22 @@ def available_provider() -> str:
 
 BLOCKED = "__BLOCKED__"
 
+# Why a module-level recorder and not a changed return type:
+# fetch_static returns a bare str/BLOCKED/None and has several callers
+# (audit_batch subpage loop, tests) that unpack it positionally. Widening
+# the return to a tuple would break every one. fetch_static and fetch are
+# always called in sequence on the SAME url, so fetch_static stashes the
+# classified failure here and fetch reads it right after. Additive: a caller
+# that ignores it sees the exact same behavior as before. Overwritten on
+# every fetch_static call, so it only ever describes the most recent fetch.
+_LAST_ABORT_REASON: Optional[str] = None
+
+
+def last_abort_reason() -> Optional[str]:
+    """The pitch tag for the most recent hard failure, or None if the last
+    fetch_static succeeded or soft-blocked. Read immediately after fetch()."""
+    return _LAST_ABORT_REASON
+
 
 def fetch_static(url: str, quiet: bool = False):
     """
@@ -86,6 +105,8 @@ def fetch_static(url: str, quiet: bool = False):
     sites (Candoor scored 71, then 202d). Full headers + retry + Jina
     fallback recover them.
     """
+    global _LAST_ABORT_REASON
+    _LAST_ABORT_REASON = None   # reset per call; only a hard failure sets it
     for attempt in (1, 2):
         try:
             r = requests.get(url, timeout=30, headers=BROWSER_HEADERS)
@@ -101,10 +122,12 @@ def fetch_static(url: str, quiet: bool = False):
                 return BLOCKED
             if not quiet:
                 print(f"  [fetch] HTTP {r.status_code}: {url}")
+            _LAST_ABORT_REASON = _abort_from_status(r.status_code)
             return None
         except Exception as e:
             if not quiet:
                 print(f"  [fetch] {e}")
+            _LAST_ABORT_REASON = _abort_from_exception(e)
             return None
     return BLOCKED
 
@@ -196,6 +219,11 @@ def fetch(url: str, force_render: bool = False) -> Dict[str, Any]:
             return {"html": txt, "text": txt, "text_source": "jina",
                     "js_rendered": True, "static_text_len": 0,
                     "rendered_text_len": len(txt)}
+        # Soft-blocked AND Jina could not recover it. The site is live (it
+        # answered with a block status) but unreachable to us and to a
+        # renderer — a real wall, worth a manual look, not a confident tag.
+        global _LAST_ABORT_REASON
+        _LAST_ABORT_REASON = "auth_wall"
         return {"html": None, "text": None, "text_source": None,
                 "js_rendered": False, "static_text_len": 0,
                 "rendered_text_len": None}

@@ -75,6 +75,15 @@ from audit.checkpoint import (            # noqa: E402
 
 OUTDIR = "sourcing_output"
 
+# The no_website lane is the highest-value segment and has no other consumer.
+# It goes to a PERMANENT, synced location OUTSIDE the repo — the repo's
+# sourcing_output/ is gitignored (not backed up) and the repo root would leak
+# PII to GitHub. OneDrive syncs and survives a laptop failure. Override with
+# --no-website-book. See sourcing/BACKLOG.md item 1.
+NO_WEBSITE_BOOK = os.path.join(
+    os.path.expanduser("~"), "OneDrive", "animo_leads",
+    "no_website_leads.csv")
+
 
 def slugify(s):
     return "".join(c if c.isalnum() else "-" for c in s.lower()).strip("-")
@@ -109,6 +118,11 @@ def main():
     ap.add_argument("--cities", help="comma-separated grid cities")
     ap.add_argument("--grid", help="path to a grid JSON config")
     ap.add_argument("--output", default=OUTDIR)
+    ap.add_argument("--no-website-book",
+                    default=NO_WEBSITE_BOOK,
+                    help="permanent, append-and-dedup lead book for the "
+                         "no_website lane. Defaults to a synced drive path "
+                         "OUTSIDE the repo — this data must not be lost.")
     ap.add_argument("--batch", help="batch name; default grid-<date>-<time>")
     ap.add_argument("--max-pages", type=int, default=None,
                     help="1 page = 20 results, API caps at 3")
@@ -224,6 +238,25 @@ def main():
     n_q = emit.write_audit_queue(rows, q_path)
     print(f"[emit]      {p_path}  ({n_all} rows, every row)")
     print(f"[emit]      {q_path}  ({n_q} rows, clean + has url)")
+
+    # The no_website lane -> permanent, append-and-dedup lead book.
+    try:
+        book = emit.write_no_website_book(rows, args.no_website_book)
+        note = (f"+{book['added']} new, {book['already']} already there"
+                if book["added"] or book["already"]
+                else "no no-website leads this run")
+        print(f"[book]      {args.no_website_book}")
+        print(f"            {book['total']} leads total ({note}"
+              + (f"; {book['no_phone']} without a phone" if book["no_phone"]
+                 else "") + ")")
+    except OSError as e:
+        # A synced drive can be offline. Do NOT lose the leads silently —
+        # fall back to the repo output dir and shout about it.
+        fallback = os.path.join(args.output, "no_website_leads_FALLBACK.csv")
+        book = emit.write_no_website_book(rows, fallback)
+        print(f"[book]      WARNING: could not write {args.no_website_book}")
+        print(f"            ({e}). Wrote {book['total']} leads to {fallback}")
+        print(f"            This path is NOT backed up. Move them.")
 
     rej = [r for r in rows if r.get("status") != "clean"]
     if rej:

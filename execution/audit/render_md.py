@@ -1,9 +1,13 @@
 """
 render_md.py — findings -> .md report + TRIAGE_META footer.
 
-TRIAGE_META contract is UNCHANGED from v12 (schema_version 1.0). Downstream
-parsers (ghl-triage/triage/audit_parser.py, website-audit-builder's
-parse_audit.py) are unaffected by v13.
+TRIAGE_META is schema_version 1.1: the six diffable fields are byte-identical
+to v1.0 (Fixtures 1/2/3 pin them), plus four forward-looking fields
+(recommended_page_mode, page_mode_reasoning, estimated_monthly_leakage_usd,
+has_before_after_content) emitted null for now. Downstream parsers
+(ghl-triage/triage/audit_parser.py, website-audit-builder's parse_audit.py)
+already tolerate this: the former reads the four via .get() and accepts
+schema 1.0 or 1.1; the latter parses report prose, not this block.
 
 See docs/fixtures_golden.md — Fixtures 1/2/3 pin the six diffable fields.
 """
@@ -236,7 +240,11 @@ def build_triage_meta(url: str, m: Dict[str, Any],
                       mctb: Optional[bool], vaai: Optional[bool],
                       ghl_upgrade: bool) -> str:
     """
-    schema_version stays "1.0". Contract unchanged from v12.
+    schema_version is "1.1": adds four fields (recommended_page_mode,
+    page_mode_reasoning, estimated_monthly_leakage_usd, has_before_after_content),
+    all emitted null for now. The six diffable fields below are byte-identical
+    to v1.0 (fixtures_golden pins them). ghl-triage/audit_parser.py already
+    reads all four via .get() and accepts schema 1.1.
 
     PRODUCER/CONSUMER SPLIT — DO NOT COLLAPSE.
     When a disqualifier fires we still emit mctb/vaai per their OWN rules —
@@ -260,7 +268,7 @@ def build_triage_meta(url: str, m: Dict[str, Any],
         return "null" if v is None else ("true" if v else "false")
 
     lines = [
-        'schema_version: "1.0"',
+        'schema_version: "1.1"',
         f'audit_generated_at: "{ts}"',
         f'business_name: "{j.get("business_name") or ""}"',
         f'business_url: "{norm_url}"',
@@ -275,4 +283,17 @@ def build_triage_meta(url: str, m: Dict[str, Any],
             lines.append(f"  - {d}")
     else:
         lines.append("disqualifiers: []")
+    # v1.1 fields. Consumer (ghl-triage/audit_parser.py) already reads all
+    # four via .get() and accepts schema 1.1. All null for now:
+    # - leakage: populated downstream by ghl-triage, not here
+    # - before_after: Playwright-deferred
+    # - page_mode/reasoning: resolver deferred - service_pages reads 0 on
+    #   Jina-fetched sites (markdown strips the <a> tags it counts), so
+    #   computing it now would be wrong on every bot-blocked prospect.
+    #   Emitting null is honest; the resolver is a separate task once the
+    #   signal is fetch-method-independent.
+    lines.append("recommended_page_mode: null")
+    lines.append("page_mode_reasoning: null")
+    lines.append("estimated_monthly_leakage_usd: null")
+    lines.append("has_before_after_content: null")
     return "\n".join(lines)

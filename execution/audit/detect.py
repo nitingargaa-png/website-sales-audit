@@ -424,7 +424,20 @@ def scan(html: str, url: str, rendered_text: Optional[str] = None) -> Dict[str, 
 
         # --- phone in image, Area 3 automatic <=2 ---
         "phone_in_text": bool(re.search(
-            r"\(?\d{3}\)?[\s.\-]\d{3}[\s.\-]\d{4}", text)),
+            # North American phone in visible text. Three guarded forms so a
+            # bare order/ID number is never mistaken for a phone:
+            #   (a) leading + -> compact ok: +16473894620  (the + is the signal)
+            #   (b) no prefix -> a separator after the area code is REQUIRED
+            #   (c) (647)389-4620 paren form (parens are phone-specific)
+            # The old pattern required a separator between every group and so
+            # missed the very common +1XXXXXXXXXX header/footer format, firing
+            # a false "number may only exist in an image" on JS sites whose
+            # visible number was real text in that compact form.
+            r"(?<!\d)(?:"
+            r"\+\d{1,2}[\s.\-]?\(?\d{3}\)?[\s.\-]?\d{3}[\s.\-]?\d{4}"
+            r"|\(\d{3}\)[\s.\-]?\d{3}[\s.\-]?\d{4}"
+            r"|\d{3}[\s.\-]\d{3}[\s.\-]?\d{4}"
+            r")(?!\d)", text)),
 
         # --- reviews, Area 5 ---
         "aggregate_rating_value": agg["rating_value"],

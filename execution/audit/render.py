@@ -35,6 +35,23 @@ RETRY_DELAY_SECS = 2.0
 UA = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
       "Chrome/121.0.0.0 Safari/537.36")
 
+# Full browser header set. UA alone is not enough: servers that validate
+# the Accept header return HTTP 415 to a bare requests.get. Live 2026-07-19:
+# ~20 of 226 sites 415'd on a UA-only request. A complete set clears them.
+BROWSER_HEADERS = {
+    "User-Agent": UA,
+    "Accept": ("text/html,application/xhtml+xml,application/xml;q=0.9,"
+               "image/avif,image/webp,image/apng,*/*;q=0.8"),
+    "Accept-Language": "en-CA,en;q=0.9",
+    "Accept-Encoding": "gzip, deflate, br",
+    "Upgrade-Insecure-Requests": "1",
+}
+
+# Statuses that mean "a real server is blocking a bot" rather than "dead".
+# We retry these once, then fall through to Jina (different origin). A hard
+# failure (SSL, DNS, timeout, 404, 500) is NOT here ? Jina cannot fix those.
+SOFT_BLOCK_STATUSES = {202, 403, 429, 503}
+
 # Below this many chars of visible text, a static fetch is presumed blind.
 JS_SHELL_THRESHOLD = 500
 
@@ -56,19 +73,40 @@ def available_provider() -> str:
     return "static"
 
 
-def fetch_static(url: str, quiet: bool = False) -> Optional[str]:
-    """Raw HTML. Needed for script-src detection regardless of rendering."""
-    try:
-        r = requests.get(url, timeout=30, headers={"User-Agent": UA})
-        if r.status_code != 200:
+BLOCKED = "__BLOCKED__"
+
+
+def fetch_static(url: str, quiet: bool = False):
+    """
+    Raw HTML for script-src detection.
+
+    Returns str (200), BLOCKED (202/403/429/503 bot-wall, retried once,
+    caller should try Jina), or None (SSL/DNS/timeout/404/500 - dead,
+    Jina cannot help). UA-only drew ~50 aborts on 2026-07-19, many real
+    sites (Candoor scored 71, then 202d). Full headers + retry + Jina
+    fallback recover them.
+    """
+    for attempt in (1, 2):
+        try:
+            r = requests.get(url, timeout=30, headers=BROWSER_HEADERS)
+            if r.status_code == 200:
+                return r.text
+            if r.status_code in SOFT_BLOCK_STATUSES:
+                if attempt == 1:
+                    time.sleep(1.5)
+                    continue
+                if not quiet:
+                    print(f"  [fetch] HTTP {r.status_code} bot-block, "
+                          f"trying renderer: {url}")
+                return BLOCKED
             if not quiet:
-                print(f"  [fetch] HTTP {r.status_code} — {url}")
+                print(f"  [fetch] HTTP {r.status_code}: {url}")
             return None
-        return r.text
-    except Exception as e:
-        if not quiet:
-            print(f"  [fetch] {e}")
-        return None
+        except Exception as e:
+            if not quiet:
+                print(f"  [fetch] {e}")
+            return None
+    return BLOCKED
 
 
 def fetch_jina(url: str) -> Optional[str]:
@@ -139,6 +177,29 @@ def fetch(url: str, force_render: bool = False) -> Dict[str, Any]:
     from .detect import _strip_tags
 
     html = fetch_static(url)
+
+    # Soft block (bot-wall): our IP/headers were refused but the site is
+    # live. Jina fetches from its own origin and usually gets through.
+    # The difference between aborting a real prospect and auditing it.
+    # Candoor: 202 to us, renders fine via Jina.
+    if html == BLOCKED:
+        rendered = fetch_jina(url)
+        if rendered:
+            txt = rendered.strip()
+            print(f"  [render] jina recovered blocked site "
+                  f"({len(txt)} chars)")
+            # Return the Jina text as html too. The caller aborts on
+            # html is None (line 111); a blocked site has no static html
+            # but IS live. Script-src detection will not find <script>
+            # tags in markdown - same limitation as every JS-shell site
+            # audited via Jina. Full content audit beats no audit.
+            return {"html": txt, "text": txt, "text_source": "jina",
+                    "js_rendered": True, "static_text_len": 0,
+                    "rendered_text_len": len(txt)}
+        return {"html": None, "text": None, "text_source": None,
+                "js_rendered": False, "static_text_len": 0,
+                "rendered_text_len": None}
+
     if html is None:
         return {"html": None, "text": None, "text_source": None,
                 "js_rendered": False, "static_text_len": 0,
